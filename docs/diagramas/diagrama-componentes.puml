@@ -1,0 +1,80 @@
+@startuml Sistema de Moeda Estudantil - Diagrama de Componentes
+
+!pragma layout smetana
+skinparam componentStyle uml2
+
+package "Front-end (React + Vite) — View" {
+  component "Páginas de Aluno" as PagAluno
+  component "Páginas de Professor" as PagProf
+  component "Páginas de Empresa Parceira" as PagEmp
+  component "Cliente HTTP (Axios)" as Http
+}
+
+package "Back-end (Spring Boot) — MVC" {
+
+  package "Controller" {
+    component "AutenticacaoController" as CAuth
+    component "AlunoController" as CAluno
+    component "EmpresaParceiraController" as CEmp
+    component "VantagemController" as CVant
+    component "TransacaoController" as CTrans
+  }
+
+  package "Service (regras de negócio)" {
+    component "AutenticacaoService" as SAuth
+    component "AlunoService" as SAluno
+    component "EmpresaParceiraService" as SEmp
+    component "VantagemService" as SVant
+    component "TransacaoService" as STrans
+    component "NotificacaoService" as SNotif
+    component "Agendador de Crédito Semestral" as Job
+  }
+
+  package "Model" {
+    component "Entidades JPA" as Entidades
+  }
+
+  package "Persistência" {
+    component "Repositories (Spring Data JPA)" as Repo
+    component "Armazenamento de Fotos" as Fotos
+  }
+
+  component "Segurança (Spring Security + JWT)" as Sec
+}
+
+database "PostgreSQL" as DB
+node "Servidor SMTP" as SMTP
+
+interface "API REST (JSON)" as API
+
+PagAluno --> Http
+PagProf --> Http
+PagEmp --> Http
+Http --> API
+API - Sec
+Sec --> CAuth
+Sec --> CAluno
+Sec --> CEmp
+Sec --> CVant
+Sec --> CTrans
+
+CAuth --> SAuth
+CAluno --> SAluno
+CEmp --> SEmp
+CVant --> SVant
+CTrans --> STrans
+Job --> STrans
+
+STrans --> SNotif
+SVant --> Fotos
+
+SAuth --> Repo
+SAluno --> Repo
+SEmp --> Repo
+SVant --> Repo
+STrans --> Repo
+Repo ..> Entidades
+Repo --> DB : JDBC
+SNotif --> SMTP : JavaMailSender
+
+@enduml

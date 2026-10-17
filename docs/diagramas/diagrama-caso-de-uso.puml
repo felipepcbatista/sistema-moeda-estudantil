@@ -1,0 +1,46 @@
+@startuml Sistema de Moeda Estudantil - Diagrama de Caso de Uso
+
+!pragma layout smetana
+left to right direction
+skinparam packageStyle rectangle
+
+actor Aluno
+actor Professor
+actor "Empresa Parceira" as Empresa
+
+rectangle "Sistema de Moeda Estudantil" {
+  usecase "Autenticar-se" as UC01
+  usecase "Cadastrar-se como Aluno" as UC02
+  usecase "Manter Cadastro de Aluno" as UC03
+  usecase "Cadastrar-se como Empresa Parceira" as UC04
+  usecase "Manter Cadastro de Empresa Parceira" as UC05
+  usecase "Gerenciar Vantagens" as UC06
+  usecase "Enviar Moedas" as UC07
+  usecase "Consultar Extrato" as UC08
+  usecase "Consultar Vantagens" as UC09
+  usecase "Resgatar Vantagem" as UC10
+}
+
+Aluno --> UC02
+Aluno --> UC03
+Aluno --> UC08
+Aluno --> UC09
+Aluno --> UC10
+
+Professor --> UC07
+Professor --> UC08
+
+Empresa --> UC04
+Empresa --> UC05
+Empresa --> UC06
+
+UC03 ..> UC01 : <<include>>
+UC05 ..> UC01 : <<include>>
+UC06 ..> UC01 : <<include>>
+UC07 ..> UC01 : <<include>>
+UC08 ..> UC01 : <<include>>
+UC09 ..> UC01 : <<include>>
+UC10 ..> UC01 : <<include>>
+UC10 ..> UC09 : <<include>>
+
+@enduml

@@ -1,0 +1,162 @@
+@startuml Sistema de Moeda Estudantil - Diagrama de Classes
+
+!pragma layout smetana
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+
+package "model" {
+
+  abstract class Usuario {
+    # id: Long
+    # login: String
+    # senhaHash: String
+    + autenticar(senha: String): boolean
+  }
+
+  class Aluno {
+    - nome: String
+    - email: String
+    - cpf: String
+    - rg: String
+    - curso: String
+  }
+
+  class Professor {
+    - nome: String
+    - cpf: String
+    - departamento: String
+  }
+
+  class EmpresaParceira {
+    - nomeFantasia: String
+    - cnpj: String
+    - email: String
+  }
+
+  class InstituicaoEnsino {
+    - id: Long
+    - nome: String
+  }
+
+  class Endereco <<embeddable>> {
+    - logradouro: String
+    - numero: String
+    - complemento: String
+    - bairro: String
+    - cidade: String
+    - uf: String
+    - cep: String
+  }
+
+  class Conta {
+    - id: Long
+    - saldo: int
+    + creditar(valor: int): void
+    + debitar(valor: int): void
+    + possuiSaldo(valor: int): boolean
+  }
+
+  class Vantagem {
+    - id: Long
+    - nome: String
+    - descricao: String
+    - fotoUrl: String
+    - custoMoedas: int
+    - ativa: boolean
+  }
+
+  abstract class Transacao {
+    # id: Long
+    # valor: int
+    # dataHora: LocalDateTime
+    # contaOrigem: Conta
+    # contaDestino: Conta
+  }
+
+  class EnvioMoedas {
+    - motivo: String
+  }
+
+  class ResgateVantagem {
+    - codigo: String
+  }
+
+  class CreditoSemestral {
+    - semestre: String
+  }
+
+  Usuario <|-- Aluno
+  Usuario <|-- Professor
+  Usuario <|-- EmpresaParceira
+
+  Transacao <|-- EnvioMoedas
+  Transacao <|-- ResgateVantagem
+  Transacao <|-- CreditoSemestral
+
+  Aluno "*" --> "1" InstituicaoEnsino : estuda em
+  Professor "*" --> "1" InstituicaoEnsino : faz parte de
+  Aluno *-- "1" Endereco
+  Aluno "1" *-- "1" Conta
+  Professor "1" *-- "1" Conta
+  EmpresaParceira "1" *-- "*" Vantagem : oferece
+  ResgateVantagem "*" --> "1" Vantagem
+  Transacao "*" --> "0..1" Conta : origem
+  Transacao "*" --> "0..1" Conta : destino
+}
+
+package "service" {
+
+  class AutenticacaoService {
+    + login(login: String, senha: String): Usuario
+  }
+
+  class AlunoService {
+    + cadastrar(aluno: Aluno, senha: String): Aluno
+    + buscarPorId(id: Long): Aluno
+    + listar(): List<Aluno>
+    + atualizar(id: Long, dados: Aluno): Aluno
+    + excluir(id: Long): void
+  }
+
+  class EmpresaParceiraService {
+    + cadastrar(empresa: EmpresaParceira, senha: String): EmpresaParceira
+    + buscarPorId(id: Long): EmpresaParceira
+    + listar(): List<EmpresaParceira>
+    + atualizar(id: Long, dados: EmpresaParceira): EmpresaParceira
+    + excluir(id: Long): void
+  }
+
+  class VantagemService {
+    + cadastrar(empresaId: Long, vantagem: Vantagem, foto: byte[]): Vantagem
+    + atualizar(id: Long, dados: Vantagem): Vantagem
+    + desativar(id: Long): void
+    + listarAtivas(): List<Vantagem>
+  }
+
+  class TransacaoService {
+    + enviarMoedas(professorId: Long, alunoId: Long, valor: int, motivo: String): EnvioMoedas
+    + resgatarVantagem(alunoId: Long, vantagemId: Long): ResgateVantagem
+    + creditarSemestre(semestre: String): void
+    + consultarExtrato(contaId: Long): List<Transacao>
+    - gerarCodigo(): String
+  }
+
+  interface NotificacaoService {
+    + notificarRecebimento(envio: EnvioMoedas): void
+    + enviarCupomAluno(resgate: ResgateVantagem): void
+    + notificarParceiro(resgate: ResgateVantagem): void
+  }
+
+  class EmailNotificacaoService
+
+  NotificacaoService <|.. EmailNotificacaoService
+  TransacaoService --> NotificacaoService
+}
+
+TransacaoService ..> Transacao : cria
+AlunoService ..> Aluno
+EmpresaParceiraService ..> EmpresaParceira
+VantagemService ..> Vantagem
+AutenticacaoService ..> Usuario
+
+@enduml
