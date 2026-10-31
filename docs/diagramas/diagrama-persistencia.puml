@@ -1,0 +1,80 @@
+@startuml Sistema de Moeda Estudantil - Camada de Persistencia
+
+!pragma layout smetana
+allowmixing
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+top to bottom direction
+
+' Estrategia de acesso a dados (Lab03S02): ORM (JPA/Hibernate) + padrao Repository/DAO (Spring Data JPA).
+' Os services nunca escrevem SQL: dependem de interfaces de repositorio, que o Spring implementa em tempo de execucao.
+
+package "service" {
+  class AlunoService
+  class EmpresaParceiraService
+  class InstituicaoEnsinoService
+}
+
+package "repository (Spring Data JPA — DAO)" {
+  interface "JpaRepository<T, ID>" as JpaRepository {
+    + save(entidade: T): T
+    + findById(id: ID): Optional<T>
+    + findAll(): List<T>
+    + delete(entidade: T): void
+  }
+  interface UsuarioRepository {
+    + existsByLogin(login: String): boolean
+    + existsByLoginAndIdNot(login: String, id: Long): boolean
+  }
+  interface AlunoRepository {
+    + findAllByOrderByNomeAsc(): List<Aluno>
+    + existsByCpf(cpf: String): boolean
+    + existsByEmail(email: String): boolean
+  }
+  interface EmpresaParceiraRepository {
+    + findAllByOrderByNomeFantasiaAsc(): List<EmpresaParceira>
+    + existsByCnpj(cnpj: String): boolean
+    + existsByEmail(email: String): boolean
+  }
+  interface InstituicaoEnsinoRepository {
+    + findAllByOrderByNomeAsc(): List<InstituicaoEnsino>
+  }
+  interface TransacaoRepository {
+    + findExtrato(contaId: Long): List<Transacao>
+    + existsMovimentacao(contaId: Long): boolean
+    + existsResgateDaEmpresa(empresaId: Long): boolean
+  }
+  interface ProfessorRepository
+  interface VantagemRepository {
+    + findByAtivaTrueOrderByNomeAsc(): List<Vantagem>
+  }
+}
+
+package "Infraestrutura" {
+  component "Hibernate (ORM)" as Hibernate
+  component "Flyway\n(V1 schema, V2 carga inicial)" as Flyway
+  database "PostgreSQL" as DB
+}
+
+AlunoService --> AlunoRepository
+AlunoService --> UsuarioRepository
+AlunoService --> InstituicaoEnsinoRepository
+AlunoService --> TransacaoRepository
+EmpresaParceiraService --> EmpresaParceiraRepository
+EmpresaParceiraService --> UsuarioRepository
+EmpresaParceiraService --> TransacaoRepository
+InstituicaoEnsinoService --> InstituicaoEnsinoRepository
+
+JpaRepository <|-- UsuarioRepository
+JpaRepository <|-- AlunoRepository
+JpaRepository <|-- EmpresaParceiraRepository
+JpaRepository <|-- InstituicaoEnsinoRepository
+JpaRepository <|-- TransacaoRepository
+JpaRepository <|-- ProfessorRepository
+JpaRepository <|-- VantagemRepository
+
+JpaRepository ..> Hibernate : implementado via
+Hibernate --> DB : SQL / JDBC
+Flyway --> DB : versiona o schema
+
+@enduml

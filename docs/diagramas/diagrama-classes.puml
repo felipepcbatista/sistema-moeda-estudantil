@@ -111,19 +111,23 @@ package "service" {
   }
 
   class AlunoService {
-    + cadastrar(aluno: Aluno, senha: String): Aluno
+    + cadastrar(dados: AlunoRequest): Aluno
     + buscarPorId(id: Long): Aluno
     + listar(): List<Aluno>
-    + atualizar(id: Long, dados: Aluno): Aluno
+    + atualizar(id: Long, dados: AlunoRequest): Aluno
     + excluir(id: Long): void
   }
 
   class EmpresaParceiraService {
-    + cadastrar(empresa: EmpresaParceira, senha: String): EmpresaParceira
+    + cadastrar(dados: EmpresaParceiraRequest): EmpresaParceira
     + buscarPorId(id: Long): EmpresaParceira
     + listar(): List<EmpresaParceira>
-    + atualizar(id: Long, dados: EmpresaParceira): EmpresaParceira
+    + atualizar(id: Long, dados: EmpresaParceiraRequest): EmpresaParceira
     + excluir(id: Long): void
+  }
+
+  class InstituicaoEnsinoService {
+    + listar(): List<InstituicaoEnsino>
   }
 
   class VantagemService {
@@ -158,5 +162,6 @@ AlunoService ..> Aluno
 EmpresaParceiraService ..> EmpresaParceira
 VantagemService ..> Vantagem
 AutenticacaoService ..> Usuario
+
 
 @enduml

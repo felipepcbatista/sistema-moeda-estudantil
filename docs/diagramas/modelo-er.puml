@@ -1,0 +1,108 @@
+@startuml Sistema de Moeda Estudantil - Modelo ER
+
+!pragma layout smetana
+hide circle
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+
+' Notacao: PK = chave primaria, FK = chave estrangeira, UK = unica, * = NOT NULL
+' Fonte de verdade do schema: backend/src/main/resources/db/migration/V1__schema_inicial.sql
+
+entity "usuario" as usuario {
+  * id : BIGINT <<PK>>
+  --
+  * login : VARCHAR(60) <<UK>>
+  * senha_hash : VARCHAR(100)
+}
+
+entity "aluno" as aluno {
+  * id : BIGINT <<PK, FK usuario>>
+  --
+  * nome : VARCHAR(150)
+  * email : VARCHAR(150) <<UK>>
+  * cpf : VARCHAR(11) <<UK>>
+  * rg : VARCHAR(20)
+  * curso : VARCHAR(100)
+  * logradouro : VARCHAR(150)
+  * numero : VARCHAR(10)
+    complemento : VARCHAR(60)
+  * bairro : VARCHAR(80)
+  * cidade : VARCHAR(80)
+  * uf : VARCHAR(2)
+  * cep : VARCHAR(8)
+  * instituicao_id : BIGINT <<FK>>
+  * conta_id : BIGINT <<FK, UK>>
+}
+
+entity "professor" as professor {
+  * id : BIGINT <<PK, FK usuario>>
+  --
+  * nome : VARCHAR(150)
+  * cpf : VARCHAR(11) <<UK>>
+  * departamento : VARCHAR(100)
+  * instituicao_id : BIGINT <<FK>>
+  * conta_id : BIGINT <<FK, UK>>
+}
+
+entity "empresa_parceira" as empresa {
+  * id : BIGINT <<PK, FK usuario>>
+  --
+  * nome_fantasia : VARCHAR(150)
+  * cnpj : VARCHAR(14) <<UK>>
+  * email : VARCHAR(150) <<UK>>
+}
+
+entity "instituicao_ensino" as instituicao {
+  * id : BIGINT <<PK>>
+  --
+  * nome : VARCHAR(150) <<UK>>
+}
+
+entity "conta" as conta {
+  * id : BIGINT <<PK>>
+  --
+  * saldo : INTEGER  (>= 0)
+}
+
+entity "vantagem" as vantagem {
+  * id : BIGINT <<PK>>
+  --
+  * nome : VARCHAR(120)
+  * descricao : VARCHAR(500)
+  * foto_url : VARCHAR(300)
+  * custo_moedas : INTEGER  (> 0)
+  * ativa : BOOLEAN
+  * empresa_id : BIGINT <<FK>>
+}
+
+entity "transacao" as transacao {
+  * id : BIGINT <<PK>>
+  --
+  * tipo : VARCHAR(20)  (ENVIO | RESGATE | CREDITO)
+  * valor : INTEGER  (> 0)
+  * data_hora : TIMESTAMP
+    conta_origem_id : BIGINT <<FK>>
+    conta_destino_id : BIGINT <<FK>>
+    motivo : VARCHAR(500)  -- ENVIO
+    codigo : VARCHAR(20) <<UK>>  -- RESGATE
+    vantagem_id : BIGINT <<FK>>  -- RESGATE
+    semestre : VARCHAR(7)  -- CREDITO
+}
+
+usuario ||--o| aluno
+usuario ||--o| professor
+usuario ||--o| empresa
+
+instituicao ||--o{ aluno : "estuda em"
+instituicao ||--o{ professor : "faz parte de"
+
+aluno ||--|| conta
+professor ||--|| conta
+
+empresa ||--o{ vantagem : oferece
+
+conta |o--o{ transacao : "origem"
+conta |o--o{ transacao : "destino"
+vantagem |o--o{ transacao : "resgatada em"
+
+@enduml

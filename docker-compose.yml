@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: moeda-estudantil-db
+    environment:
+      POSTGRES_DB: moeda_estudantil
+      POSTGRES_USER: moeda
+      POSTGRES_PASSWORD: moeda
+    ports:
+      # porta 5434 no host para nao colidir com um PostgreSQL local na 5432
+      - "5434:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

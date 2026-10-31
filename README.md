@@ -1,6 +1,9 @@
 # Sistema de Moeda Estudantil — PUC Minas | Projeto de Software (2S2026)
 
-Laboratório 3, Sprint 1 (Lab03S01): Modelagem do sistema — Diagrama de Casos de Uso, Histórias de Usuário, Diagrama de Classes e Diagrama de Componentes.
+| Sprint | Entrega | Seções |
+|---|---|---|
+| **Lab03S01** | Modelagem: casos de uso, histórias de usuário, diagrama de classes e de componentes | 1–7 |
+| **Lab03S02** | Modelo ER, estratégia de acesso a dados (ORM + Repository/DAO), CRUDs de aluno e empresa parceira (front-end + back-end) | 8–11 |
 
 ## 1. Contexto
 
@@ -206,4 +209,87 @@ Fonte PlantUML em [`docs/diagramas/diagrama-componentes.puml`](docs/diagramas/di
 | Crédito semestral | `@Scheduled` do Spring (job agendado) |
 | Front-end | React + Vite, Axios |
 
-A estratégia de acesso a dados (ORM via JPA + Repository) e o modelo ER são detalhados na Sprint 2 (Lab03S02).
+A estratégia de acesso a dados (ORM via JPA + Repository) e o modelo ER são detalhados na Sprint 2 (Seções 8 e 9).
+
+## 8. Modelo ER (Lab03S02)
+
+![Modelo ER](docs/diagramas/modelo-er.png)
+
+Fonte PlantUML em [`docs/diagramas/modelo-er.puml`](docs/diagramas/modelo-er.puml). A fonte de verdade do schema é a migração [`V1__schema_inicial.sql`](backend/src/main/resources/db/migration/V1__schema_inicial.sql); o diagrama a espelha coluna a coluna.
+
+**Do diagrama de classes para as tabelas:**
+
+| Decisão | Mapeamento | Por quê |
+|---|---|---|
+| Herança `Usuario` → `Aluno` / `Professor` / `EmpresaParceira` | **JOINED**: tabela `usuario` (login, senha) + uma tabela por subclasse, com PK = FK para `usuario` | Login único entre todos os perfis numa só constraint; subclasses têm colunas bem diferentes, então tabela única teria muitas colunas nulas. |
+| Herança `Transacao` → `EnvioMoedas` / `ResgateVantagem` / `CreditoSemestral` | **SINGLE_TABLE**: tabela `transacao` com discriminador `tipo` | Cada subclasse acrescenta um único campo; o extrato (US08) lê tudo de uma conta numa consulta sem joins. |
+| `Endereco` (`<<embeddable>>`) | Colunas na própria tabela `aluno` | Objeto de valor, sem identidade própria. |
+| Composição Aluno/Professor ↔ `Conta` | FK `conta_id` única em `aluno` e `professor` | Relação 1:1; a conta é criada e excluída junto com o dono (cascade). |
+| Regras de integridade no banco | `CHECK saldo >= 0`, `CHECK custo_moedas > 0`, `CHECK valor > 0`, `UNIQUE` em CPF, CNPJ, email, login e código de resgate | Última barreira caso uma regra escape da camada de serviço. |
+| CPF, CNPJ e CEP | Gravados só com dígitos | A API aceita com ou sem máscara e normaliza antes de gravar. |
+
+## 9. Estratégia de acesso a dados (Lab03S02)
+
+**Escolha: ORM (JPA/Hibernate) + padrão Repository/DAO via Spring Data JPA, com schema versionado pelo Flyway.**
+
+![Camada de persistência](docs/diagramas/diagrama-persistencia.png)
+
+Fonte PlantUML em [`docs/diagramas/diagrama-persistencia.puml`](docs/diagramas/diagrama-persistencia.puml).
+
+- **ORM (JPA/Hibernate):** as entidades do pacote `model` são as classes do diagrama de classes, anotadas com o mapeamento para as tabelas. Mantém modelo e código alinhados (critério de avaliação).
+- **Repository (DAO):** cada agregado tem uma interface em `repository` que estende `JpaRepository`. O Spring gera a implementação; consultas específicas usam nomes de método (`existsByCpf`) ou JPQL (`findExtrato`). Os services dependem só das interfaces, nunca de SQL.
+- **Flyway:** o schema é criado por migrações SQL versionadas (`V1` schema, `V2` carga inicial), e o Hibernate roda com `ddl-auto=validate`, só conferindo se as entidades batem com o banco. O banco evolui por versão, e qualquer divergência entre modelo e schema derruba a aplicação na subida, em vez de virar erro silencioso.
+- **Carga inicial (V2):** instituições (PUC Minas, UFMG, CEFET-MG) e três professores, cada um já com o crédito de 1.000 moedas do semestre 2026-2 registrado como `CreditoSemestral` (RN02, RN03, RN04).
+- **Senhas:** só o hash BCrypt é gravado (`usuario.senha_hash`).
+
+**Alternativas consideradas:** JDBC puro com DAOs escritos à mão (mais código repetitivo e o mapeamento objeto-relacional feito manualmente, sem ganho para este domínio) e `ddl-auto=update` no lugar do Flyway (o schema ficaria implícito e não versionado).
+
+**Mudanças no diagrama de classes nesta sprint:** os métodos `cadastrar`/`atualizar` de `AlunoService` e `EmpresaParceiraService` passaram a receber DTOs de requisição (`AlunoRequest`, `EmpresaParceiraRequest`) em vez da entidade, porque a requisição traz dados que não pertencem à entidade (senha em texto puro, id da instituição). Entrou também o `InstituicaoEnsinoService`, que alimenta a seleção de instituição no cadastro de aluno (RN02).
+
+## 10. CRUDs de aluno e empresa parceira (Lab03S02)
+
+**Fluxo MVC:** tela React → Axios → Controller REST → Service (regras) → Repository → PostgreSQL.
+
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/api/instituicoes` | Instituições pré-cadastradas |
+| GET | `/api/alunos` | Lista alunos (com instituição e saldo) |
+| GET | `/api/alunos/{id}` | Consulta aluno |
+| POST | `/api/alunos` | Cadastra aluno (US02), saldo inicial 0 |
+| PUT | `/api/alunos/{id}` | Edita aluno (US03); senha em branco mantém a atual |
+| DELETE | `/api/alunos/{id}` | Exclui aluno; bloqueado se houver movimentação de moedas |
+| GET | `/api/empresas` | Lista empresas parceiras |
+| GET | `/api/empresas/{id}` | Consulta empresa |
+| POST | `/api/empresas` | Cadastra empresa (US04) |
+| PUT | `/api/empresas/{id}` | Edita empresa (US05) |
+| DELETE | `/api/empresas/{id}` | Exclui empresa e suas vantagens; bloqueado se alguma vantagem já foi resgatada |
+
+**Respostas de erro:** `400` com erro por campo (validação), `404` (não encontrado), `422` (regra de negócio: CPF/CNPJ/email/login duplicado, senha ausente no cadastro, exclusão bloqueada). As telas exibem a mensagem geral e o erro embaixo de cada campo.
+
+**Telas:** listagem e formulário de aluno (dados pessoais, vínculo acadêmico com seleção da instituição, endereço, acesso) e de empresa parceira.
+
+**Testes automatizados** (`backend/src/test`): 13 testes, com testes de integração MockMvc rodando as mesmas migrações Flyway num H2 em modo PostgreSQL, cobrindo cadastro, normalização, validação, duplicidade (inclusive login de professor), edição sem troca de senha, exclusão e os dois bloqueios de exclusão, além de testes unitários de `Conta`.
+
+**Fica para a Sprint 3:** autenticação (Spring Security + JWT) e restrição de cada perfil ao próprio cadastro, versão final dos CRUDs e slides da arquitetura e da camada de persistência.
+
+## 11. Como executar
+
+Pré-requisitos: Java 21, Maven, Node 20+ e Docker.
+
+```bash
+# 1. Banco (PostgreSQL 16 na porta 5434 do host)
+docker compose up -d
+
+# 2. Back-end (http://localhost:8080); o Flyway cria o schema e a carga inicial na primeira subida
+cd backend
+mvn spring-boot:run
+
+# 3. Front-end (http://localhost:5180); o Vite encaminha /api para o back-end
+cd frontend
+npm install
+npm run dev
+```
+
+Testes do back-end: `cd backend && mvn test` (não precisam do Docker).
+
+Professores de exemplo: `prof.ana`, `prof.bruno`, `prof.carla`, todos com senha `prof123` (usados a partir da Sprint 3).
