@@ -15,9 +15,6 @@ public interface AlunoRepository extends JpaRepository<Aluno, Long> {
     @EntityGraph(attributePaths = {"instituicao", "conta"})
     Optional<Aluno> findById(Long id);
 
-    @EntityGraph(attributePaths = {"instituicao", "conta"})
-    List<Aluno> findAllByOrderByNomeAsc();
-
     /** Alunos que o professor pode reconhecer: os da mesma instituicao. */
     @EntityGraph(attributePaths = {"instituicao", "conta"})
     List<Aluno> findByInstituicaoIdOrderByNomeAsc(Long instituicaoId);

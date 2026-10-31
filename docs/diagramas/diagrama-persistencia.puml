@@ -32,14 +32,12 @@ package "repository (Spring Data JPA — DAO)" {
     + existsByLoginAndIdNot(login: String, id: Long): boolean
   }
   interface AlunoRepository {
-    + findAllByOrderByNomeAsc(): List<Aluno>
     + findByInstituicaoIdOrderByNomeAsc(id: Long): List<Aluno>
     + findByContaId(contaId: Long): Optional<Aluno>
     + existsByCpf(cpf: String): boolean
     + existsByEmail(email: String): boolean
   }
   interface EmpresaParceiraRepository {
-    + findAllByOrderByNomeFantasiaAsc(): List<EmpresaParceira>
     + existsByCnpj(cnpj: String): boolean
     + existsByEmail(email: String): boolean
   }

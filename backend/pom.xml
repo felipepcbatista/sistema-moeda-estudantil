@@ -13,7 +13,7 @@
 
     <groupId>br.pucminas</groupId>
     <artifactId>moeda-estudantil</artifactId>
-    <version>0.2.0</version>
+    <version>0.3.0</version>
     <name>moeda-estudantil</name>
     <description>Sistema de Moeda Estudantil - Lab03 Projeto de Software (PUC Minas)</description>
 
@@ -39,10 +39,14 @@
             <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
 
-        <!-- Apenas o BCrypt; o Spring Security completo (JWT) entra na Sprint 3 -->
+        <!-- Autenticacao stateless: Spring Security + JWT assinado (HS256) emitido e validado pela propria API -->
         <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-crypto</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
         </dependency>
 
         <dependency>
@@ -62,6 +66,11 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

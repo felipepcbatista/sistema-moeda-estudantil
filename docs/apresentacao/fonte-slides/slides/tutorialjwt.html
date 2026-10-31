@@ -1,0 +1,20 @@
+<section id="tutorialjwt" data-transition="fade" style="background:#0F1B3D;color:#F6F5F1;font-family:Poppins, Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:26px;font-weight:600;text-transform:uppercase;letter-spacing:3px;color:#F5B83D">Tutorial · Spring Security + JWT</p>
+<h2 style="font-family:'Barlow Condensed', Arial, sans-serif;font-size:88px;font-weight:800;font-style:italic;text-transform:uppercase;line-height:1;color:#F6F5F1">Cada um só mexe no que é seu</h2>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:28px">
+<div style="display:flex;flex-direction:column;gap:18px;background:#1B2A55;padding:32px;border-left:8px solid #F5B83D;border-radius:12px">
+<h3 style="font-size:32px;font-weight:700;color:#F5B83D">1. Login emite o token</h3>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#F6F5F1;background:#0F1B3D;padding:16px;border-radius:8px;line-height:1.45">{ "sub": "4",<br>  "perfil": "ALUNO",<br>  "exp": +8h }</p>
+<p style="font-size:26px;color:#C9D1E6;line-height:1.45">Assinado com HS256. O front manda em toda chamada: Authorization: Bearer …</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:18px;background:#1B2A55;padding:32px;border-left:8px solid #F5B83D;border-radius:12px">
+<h3 style="font-size:32px;font-weight:700;color:#F5B83D">2. A rota declara quem pode</h3>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#F6F5F1;background:#0F1B3D;padding:16px;border-radius:8px;line-height:1.45">@PreAuthorize(<br>"hasRole('ALUNO') and<br> @acesso.ehOProprio(#id)")</p>
+<p style="font-size:26px;color:#C9D1E6;line-height:1.45">Sem token ou token inválido: <b style="color:#F6F5F1">401</b>. Dado de outro usuário: <b style="color:#F6F5F1">403</b>.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;right:128px;bottom:64px;font-size:24px;color:#C9D1E6">Fonte: SegurancaConfig, TokenService, Acesso e SegurancaTest (README, seção 12) · 15/18</p>
+<aside>A principal entrega da S03 é a versão final dos CRUDs com segurança de verdade. Antes, a tela escondia os botões, mas a API aceitava qualquer chamada. Agora, no login, a API emite um token JWT assinado, com o id do usuário, o perfil e a validade de 8 horas. O front envia esse token em toda requisição. O Spring Security valida a assinatura, e cada rota declara quem pode usá-la com PreAuthorize. O componente Acesso responde se o id da rota é do usuário logado. Testamos com tokens reais: a aluna Maria recebe 403 ao tentar ler o cadastro do João, e um professor recebe 403 ao tentar gastar o saldo de outro professor.</aside>
+</section>

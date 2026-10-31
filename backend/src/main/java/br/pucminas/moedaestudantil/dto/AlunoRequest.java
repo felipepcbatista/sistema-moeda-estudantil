@@ -10,7 +10,7 @@ import jakarta.validation.constraints.Size;
 
 /**
  * Dados de cadastro/edicao de aluno (RN01). A senha e obrigatoria no cadastro e opcional na edicao
- * (em branco = manter a atual); essa diferenca e checada no AlunoService.
+ * (em branco = manter a atual); para trocar a senha na edicao, "senhaAtual" e obrigatoria. Checado no AlunoService.
  */
 public record AlunoRequest(
         @NotBlank(message = "Nome é obrigatório") @Size(max = 150) String nome,
@@ -21,5 +21,6 @@ public record AlunoRequest(
         @NotNull(message = "Endereço é obrigatório") @Valid EnderecoDTO endereco,
         @NotNull(message = "Instituição é obrigatória") Long instituicaoId,
         @NotBlank(message = "Login é obrigatório") @Size(min = 4, max = 60, message = "Login deve ter entre 4 e 60 caracteres") String login,
-        @Size(min = 6, max = 72, message = "Senha deve ter entre 6 e 72 caracteres") String senha) {
+        @Size(min = 6, max = 72, message = "Senha deve ter entre 6 e 72 caracteres") String senha,
+        String senhaAtual) {
 }

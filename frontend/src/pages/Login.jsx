@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import Campo from '../components/Campo.jsx'
 import Moeda from '../components/Moeda.jsx'
 import { authApi, lerErro } from '../api/api.js'
@@ -15,6 +15,7 @@ const DEMO = [
 export default function Login() {
   const { entrar } = useSessao()
   const navegar = useNavigate()
+  const expirou = useLocation().state?.expirou
   const [dados, setDados] = useState({ login: '', senha: '' })
   const [erro, setErro] = useState({ mensagem: null, campos: {} })
   const [enviando, setEnviando] = useState(false)
@@ -42,6 +43,7 @@ export default function Login() {
         <Moeda tamanho={44} />
         <h1>Entrar</h1>
         <p className="suave">Professores, alunos e empresas parceiras.</p>
+        {expirou && !erro.mensagem && <p className="aviso">Sua sessão expirou. Entre novamente.</p>}
         {erro.mensagem && <p className="alerta">{erro.mensagem}</p>}
 
         <form onSubmit={submeter} noValidate className="pilha">

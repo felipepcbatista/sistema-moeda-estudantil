@@ -1,0 +1,34 @@
+<section id="mvc" data-transition="fade" style="background:#F6F5F1;color:#18203A;font-family:Poppins, Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:56px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:26px;font-weight:600;text-transform:uppercase;letter-spacing:3px;color:#2B4ACB">Arquitetura</p>
+<h2 style="font-family:'Barlow Condensed', Arial, sans-serif;font-size:88px;font-weight:800;font-style:italic;text-transform:uppercase;line-height:1;color:#0F1B3D">MVC em três camadas e um banco</h2>
+</div>
+<div style="display:flex;flex-direction:row;align-items:center;gap:20px">
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#FDFCF9;padding:32px 28px;border-left:8px solid #2B4ACB;border-radius:12px">
+<p style="font-size:24px;font-weight:600;text-transform:uppercase;letter-spacing:3px;color:#2B4ACB">View</p>
+<h3 style="font-size:32px;font-weight:700;color:#0F1B3D">React + Vite</h3>
+<p style="font-size:26px;color:#4A5068;line-height:1.45">Painéis por perfil, sessão com o token e Axios para chamar a API</p>
+</div>
+<x-shape kind="arrow-right" style="width:64px;height:32px;background:#C98A0B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#FDFCF9;padding:32px 28px;border-left:8px solid #2B4ACB;border-radius:12px">
+<p style="font-size:24px;font-weight:600;text-transform:uppercase;letter-spacing:3px;color:#2B4ACB">Controller</p>
+<h3 style="font-size:32px;font-weight:700;color:#0F1B3D">REST Spring</h3>
+<p style="font-size:26px;color:#4A5068;line-height:1.45">Recebe o JSON, valida o DTO e confere quem pode acessar</p>
+</div>
+<x-shape kind="arrow-right" style="width:64px;height:32px;background:#C98A0B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#FDFCF9;padding:32px 28px;border-left:8px solid #F5B83D;border-radius:12px">
+<p style="font-size:24px;font-weight:600;text-transform:uppercase;letter-spacing:3px;color:#C98A0B">Model</p>
+<h3 style="font-size:32px;font-weight:700;color:#0F1B3D">Service + JPA</h3>
+<p style="font-size:26px;color:#4A5068;line-height:1.45">Regras de negócio, entidades e repositories</p>
+</div>
+<x-shape kind="arrow-right" style="width:64px;height:32px;background:#C98A0B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#0F1B3D;padding:32px 28px;border-left:8px solid #F5B83D;border-radius:12px">
+<p style="font-size:24px;font-weight:600;text-transform:uppercase;letter-spacing:3px;color:#F5B83D">Dados</p>
+<h3 style="font-size:32px;font-weight:700;color:#F6F5F1">PostgreSQL</h3>
+<p style="font-size:26px;color:#C9D1E6;line-height:1.45">Schema versionado pelo Flyway</p>
+</div>
+</div>
+<p style="font-size:30px;color:#0F1B3D;line-height:1.4;background:#FFF4DC;padding:24px 32px;border-radius:12px">Regra que seguimos: o controller não decide nada de negócio. Saldo, motivo obrigatório e código do cupom ficam no service, e a regra de posse fica na anotação de segurança.</p>
+<p style="position:absolute;left:128px;right:128px;bottom:64px;font-size:24px;color:#7A8199">Fonte: diagrama de componentes (docs/diagramas) e README, seção 7 · 4/18</p>
+<aside>O enunciado exige MVC. A View é o front-end em React. O Controller são os controllers REST do Spring, que só traduzem HTTP: recebem o JSON, validam o formato e conferem a permissão. O Model concentra as regras: os services, as entidades JPA e os repositories. Ponto para enfatizar: nenhuma regra de negócio mora no controller. Se amanhã trocarmos a tela, as regras continuam valendo, porque estão no service e na API.</aside>
+</section>

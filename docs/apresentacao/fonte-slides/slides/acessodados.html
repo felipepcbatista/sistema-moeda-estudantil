@@ -1,0 +1,26 @@
+<section id="acessodados" data-transition="fade" style="background:#F6F5F1;color:#18203A;font-family:Poppins, Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:26px;font-weight:600;text-transform:uppercase;letter-spacing:3px;color:#2B4ACB">Persistência</p>
+<h2 style="font-family:'Barlow Condensed', Arial, sans-serif;font-size:88px;font-weight:800;font-style:italic;text-transform:uppercase;line-height:1;color:#0F1B3D">ORM + Repository + Flyway</h2>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:28px">
+<div style="display:flex;flex-direction:column;gap:16px;background:#FDFCF9;padding:32px;border-left:8px solid #2B4ACB;border-radius:12px">
+<h3 style="font-size:32px;font-weight:700;color:#0F1B3D">ORM · Hibernate</h3>
+<p style="font-size:26px;color:#4A5068;line-height:1.45">As entidades são as classes do diagrama, anotadas. Modelo e código ficam alinhados.</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#0F1B3D;background:#EFECE4;padding:16px;border-radius:8px;line-height:1.4">@Entity<br>@Inheritance(JOINED)<br>class Usuario</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:16px;background:#FDFCF9;padding:32px;border-left:8px solid #2B4ACB;border-radius:12px">
+<h3 style="font-size:32px;font-weight:700;color:#0F1B3D">DAO · Spring Data</h3>
+<p style="font-size:26px;color:#4A5068;line-height:1.45">Interfaces de repositório; o Spring gera a implementação. O service nunca escreve SQL.</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#0F1B3D;background:#EFECE4;padding:16px;border-radius:8px;line-height:1.4">boolean<br>existsByCpf(<br>  String cpf);</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:16px;background:#FDFCF9;padding:32px;border-left:8px solid #F5B83D;border-radius:12px">
+<h3 style="font-size:32px;font-weight:700;color:#0F1B3D">Schema · Flyway</h3>
+<p style="font-size:26px;color:#4A5068;line-height:1.45">O banco evolui por migrações SQL. O Hibernate só confere: ddl-auto=validate.</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#0F1B3D;background:#EFECE4;padding:16px;border-radius:8px;line-height:1.4">V1__schema<br>V2__carga<br>_inicial.sql</p>
+</div>
+</div>
+<p style="font-size:28px;color:#4A5068;line-height:1.4">Descartado: <b style="color:#0F1B3D">JDBC com DAO escrito à mão</b> (muito código repetitivo) e <b style="color:#0F1B3D">ddl-auto=update</b> (schema implícito, sem versão).</p>
+<p style="position:absolute;left:128px;right:128px;bottom:64px;font-size:24px;color:#7A8199">Fonte: README, seção 9 (estratégia de acesso a dados) · 10/18</p>
+<aside>A estratégia de acesso ao banco, que é o centro da S02. Três peças. O ORM, o Hibernate via JPA: as classes do diagrama viram entidades com anotações. O padrão DAO, via Spring Data: declaramos uma interface, por exemplo existsByCpf, e o Spring gera a consulta pelo nome do método. Consultas mais complexas, como o extrato, usam JPQL. O Flyway versiona o schema: V1 cria as tabelas e V2 carrega instituições e professores. O Hibernate fica em modo validate: se a entidade não bater com a tabela, a aplicação nem sobe. Isso já nos salvou de um bug, que aparece no slide de custos. Mencionar as alternativas descartadas.</aside>
+</section>

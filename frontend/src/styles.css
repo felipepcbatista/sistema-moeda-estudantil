@@ -338,3 +338,4 @@ legend { padding: 0 0.4rem; font-weight: 700; }
   .busca { min-width: 0; width: 100%; }
   .lista-pessoas li { flex-wrap: wrap; }
 }
+.aviso { padding: 0.8rem 1rem; border-radius: 10px; font-weight: 500; margin: 0 0 1rem; background: var(--ouro-fundo); color: var(--ouro-texto); }

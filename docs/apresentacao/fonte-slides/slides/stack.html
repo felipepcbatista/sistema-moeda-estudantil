@@ -1,0 +1,17 @@
+<section id="stack" data-transition="fade" style="background:#0F1B3D;color:#F6F5F1;font-family:Poppins, Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:44px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:26px;font-weight:600;text-transform:uppercase;letter-spacing:3px;color:#F5B83D">Tutorial das tecnologias</p>
+<h2 style="font-family:'Barlow Condensed', Arial, sans-serif;font-size:88px;font-weight:800;font-style:italic;text-transform:uppercase;line-height:1;color:#F6F5F1">A stack, camada por camada</h2>
+</div>
+<table style="font-family:Poppins, Arial, sans-serif;font-size:26px;color:#F6F5F1">
+<tr style="background:#F5B83D"><th style="width:22%;color:#0F1B3D;padding:14px 20px">Camada</th><th style="width:34%;color:#0F1B3D">Tecnologia</th><th style="width:44%;color:#0F1B3D">Para que serve aqui</th></tr>
+<tr style="background:#1B2A55"><td>Front-end</td><td>React 18 + Vite</td><td>Painéis por perfil; o Vite repassa /api ao back-end</td></tr>
+<tr style="background:#0F1B3D"><td>Back-end</td><td>Java 21 + Spring Boot 3.4</td><td>API REST, validação e regras nos services</td></tr>
+<tr style="background:#1B2A55"><td>Persistência</td><td>Spring Data JPA + Flyway</td><td>ORM, repositories e schema versionado</td></tr>
+<tr style="background:#0F1B3D"><td>Banco</td><td>PostgreSQL 16 (Docker)</td><td>Dados; H2 em modo PostgreSQL nos testes</td></tr>
+<tr style="background:#1B2A55"><td>Segurança</td><td>Spring Security + JWT</td><td>Login, token HS256 e regras de posse</td></tr>
+<tr style="background:#0F1B3D"><td>Email</td><td>JavaMailSender + Mailpit</td><td>Avisos e cupons; caixa de teste em :8025</td></tr>
+</table>
+<p style="position:absolute;left:128px;right:128px;bottom:64px;font-size:24px;color:#C9D1E6">Fonte: backend/pom.xml, frontend/package.json e docker-compose.yml · 13/18</p>
+<aside>Início do tutorial das tecnologias, que o enunciado pede para a apresentação final. A ideia é mostrar o papel de cada peça neste projeto, não a ferramenta em abstrato. Front em React com Vite: o servidor do Vite repassa as chamadas para a API, então o navegador vê uma única origem e não precisamos configurar CORS. Back-end em Spring Boot com Java 21. Persistência com Spring Data JPA e Flyway. PostgreSQL rodando no Docker, e H2 nos testes. Segurança com Spring Security e JWT. Email com JavaMailSender, e em desenvolvimento o Mailpit, que captura os emails numa caixa de entrada local. Nos próximos três slides, como cada parte se usa.</aside>
+</section>

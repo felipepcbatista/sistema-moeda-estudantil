@@ -1,7 +1,5 @@
 package br.pucminas.moedaestudantil.service;
 
-import java.util.List;
-
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,18 +48,16 @@ public class EmpresaParceiraService {
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Empresa parceira", id));
     }
 
-    @Transactional(readOnly = true)
-    public List<EmpresaParceira> listar() {
-        return empresaRepository.findAllByOrderByNomeFantasiaAsc();
-    }
-
-    /** US05: senha em branco mantem a atual. */
+    /** US05: senha em branco mantem a atual, trocar exige a senha atual. */
     @Transactional
     public EmpresaParceira atualizar(Long id, EmpresaParceiraRequest dados) {
         EmpresaParceira empresa = buscarPorId(id);
         validarUnicidade(dados, id);
         aplicar(empresa, dados);
         if (dados.senha() != null && !dados.senha().isBlank()) {
+            if (!empresa.autenticar(dados.senhaAtual(), passwordEncoder)) {
+                throw new RegraNegocioException("Senha atual incorreta");
+            }
             empresa.setSenhaHash(passwordEncoder.encode(dados.senha()));
         }
         return empresa;

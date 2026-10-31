@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,9 +21,13 @@ import jakarta.validation.Valid;
 
 /**
  * Cadastro e edicao chegam como multipart: parte "dados" (JSON) + parte "foto" (arquivo de imagem).
+ * Vitrine e consulta sao publicas; gerenciar vantagens so para a empresa dona delas.
  */
 @RestController
 public class VantagemController {
+
+    private static final String PROPRIA_EMPRESA = "hasRole('EMPRESA') and @acesso.ehOProprio(#empresaId)";
+    private static final String DONA_DA_VANTAGEM = "hasRole('EMPRESA') and @acesso.ehDonoDaVantagem(#id)";
 
     private final VantagemService service;
 
@@ -42,10 +47,12 @@ public class VantagemController {
     }
 
     @GetMapping("/api/empresas/{empresaId}/vantagens")
+    @PreAuthorize(PROPRIA_EMPRESA)
     public List<VantagemResponse> listarDaEmpresa(@PathVariable Long empresaId) {
         return service.listarDaEmpresa(empresaId).stream().map(VantagemResponse::from).toList();
     }
 
+    @PreAuthorize(PROPRIA_EMPRESA)
     @PostMapping(path = "/api/empresas/{empresaId}/vantagens", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public VantagemResponse cadastrar(@PathVariable Long empresaId,
@@ -54,6 +61,7 @@ public class VantagemController {
         return VantagemResponse.from(service.cadastrar(empresaId, dados, foto));
     }
 
+    @PreAuthorize(DONA_DA_VANTAGEM)
     @PutMapping(path = "/api/vantagens/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public VantagemResponse atualizar(@PathVariable Long id,
                                       @Valid @RequestPart("dados") VantagemRequest dados,
@@ -61,11 +69,13 @@ public class VantagemController {
         return VantagemResponse.from(service.atualizar(id, dados, foto));
     }
 
+    @PreAuthorize(DONA_DA_VANTAGEM)
     @PostMapping("/api/vantagens/{id}/desativar")
     public VantagemResponse desativar(@PathVariable Long id) {
         return VantagemResponse.from(service.desativar(id));
     }
 
+    @PreAuthorize(DONA_DA_VANTAGEM)
     @PostMapping("/api/vantagens/{id}/reativar")
     public VantagemResponse reativar(@PathVariable Long id) {
         return VantagemResponse.from(service.reativar(id));

@@ -14,6 +14,7 @@ const VAZIO = {
   instituicaoId: '',
   login: '',
   senha: '',
+  senhaAtual: '',
   endereco: { logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '', cep: '' },
 }
 
@@ -24,7 +25,7 @@ const VAZIO = {
 export default function AlunoForm({ id }) {
   const editando = Boolean(id)
   const navegar = useNavigate()
-  const { entrar, sair } = useSessao()
+  const { entrar, sair, renomear } = useSessao()
 
   const [dados, setDados] = useState(VAZIO)
   const [instituicoes, setInstituicoes] = useState([])
@@ -43,6 +44,7 @@ export default function AlunoForm({ id }) {
             ...a,
             instituicaoId: a.instituicao.id,
             senha: '',
+            senhaAtual: '',
             endereco: { ...a.endereco, complemento: a.endereco.complemento ?? '' },
           }),
         )
@@ -69,12 +71,13 @@ export default function AlunoForm({ id }) {
       instituicaoId: dados.instituicaoId === '' ? null : Number(dados.instituicaoId),
       login: dados.login,
       senha: dados.senha === '' ? null : dados.senha,
+      senhaAtual: dados.senhaAtual === '' ? null : dados.senhaAtual,
     }
     try {
       if (editando) {
         const a = await alunosApi.atualizar(id, corpo)
-        entrar({ id: a.id, perfil: 'ALUNO', nome: a.nome })
-        setDados({ ...dados, senha: '' })
+        renomear(a.nome)
+        setDados({ ...dados, senha: '', senhaAtual: '' })
         setAviso('Cadastro atualizado.')
       } else {
         await alunosApi.cadastrar(corpo)
@@ -167,6 +170,17 @@ export default function AlunoForm({ id }) {
               erro={c.senha}
               largura="l2"
             />
+            {editando && dados.senha !== '' && (
+              <Campo
+                rotulo="Senha atual (para confirmar a troca)"
+                nome="senhaAtual"
+                type="password"
+                autoComplete="current-password"
+                value={dados.senhaAtual}
+                onChange={alterar}
+                largura="l2"
+              />
+            )}
           </div>
         </fieldset>
 

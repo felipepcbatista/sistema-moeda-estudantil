@@ -13,19 +13,19 @@ import br.pucminas.moedaestudantil.model.Professor;
 import br.pucminas.moedaestudantil.model.Usuario;
 import br.pucminas.moedaestudantil.repository.UsuarioRepository;
 
-/**
- * US01: confere login e senha e identifica o perfil.
- * Nesta versao nao emite token; a protecao das rotas com Spring Security + JWT e da Sprint 3.
- */
+/** US01: confere login e senha, identifica o perfil e emite o token JWT da sessao. */
 @Service
 public class AutenticacaoService {
 
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
+    private final TokenService tokenService;
 
-    public AutenticacaoService(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder) {
+    public AutenticacaoService(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder,
+                               TokenService tokenService) {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
+        this.tokenService = tokenService;
     }
 
     @Transactional(readOnly = true)
@@ -35,11 +35,14 @@ public class AutenticacaoService {
                 // mesma mensagem para login inexistente e senha errada: nao revela quais logins existem
                 .orElseThrow(CredenciaisInvalidasException::new);
 
-        return switch (usuario) {
-            case Aluno a -> new SessaoResponse(a.getId(), Perfil.ALUNO, a.getNome());
-            case Professor p -> new SessaoResponse(p.getId(), Perfil.PROFESSOR, p.getNome());
-            case EmpresaParceira e -> new SessaoResponse(e.getId(), Perfil.EMPRESA, e.getNomeFantasia());
+        Perfil perfil;
+        String nome;
+        switch (usuario) {
+            case Aluno a -> { perfil = Perfil.ALUNO; nome = a.getNome(); }
+            case Professor p -> { perfil = Perfil.PROFESSOR; nome = p.getNome(); }
+            case EmpresaParceira e -> { perfil = Perfil.EMPRESA; nome = e.getNomeFantasia(); }
             default -> throw new IllegalStateException("Perfil desconhecido: " + usuario.getClass());
-        };
+        }
+        return new SessaoResponse(usuario.getId(), perfil, nome, tokenService.gerar(usuario.getId(), perfil, nome));
     }
 }

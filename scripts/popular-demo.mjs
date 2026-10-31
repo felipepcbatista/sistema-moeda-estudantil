@@ -1,5 +1,6 @@
 // Popula o sistema com dados de demonstracao usando a propria API (passa pelas mesmas regras de negocio).
 // Uso, com o back-end rodando e o banco recem-criado:  node scripts/popular-demo.mjs
+// Cada acao usa o token JWT do proprio ator (empresa cadastra a vantagem, professor envia, aluno resgata).
 // Senhas: alunos = aluno123, empresas = empresa123, professores (carga inicial) = prof123
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -8,8 +9,9 @@ import { fileURLToPath } from 'node:url'
 const API = process.env.API_URL ?? 'http://localhost:8080/api'
 const FOTOS = join(dirname(fileURLToPath(import.meta.url)), 'demo-fotos')
 
-async function chamar(metodo, rota, corpo) {
+async function chamar(metodo, rota, corpo, token) {
   const opcoes = { method: metodo, headers: {} }
+  if (token) opcoes.headers.Authorization = `Bearer ${token}`
   if (corpo instanceof FormData) opcoes.body = corpo
   else if (corpo) {
     opcoes.headers['Content-Type'] = 'application/json'
@@ -68,6 +70,8 @@ const EMPRESAS = [
 ]
 
 // [professor, aluno, moedas, motivo]
+const token = async (login, senha) => (await chamar('POST', '/auth/login', { login, senha })).token
+
 const ENVIOS = [
   ['prof.ana', 'maria.silva', 120, 'Apresentação excelente do trabalho final de Projeto de Software. Pesquisa muito bem fundamentada!'],
   ['prof.ana', 'joao.pereira', 80, 'Ajudou os colegas na monitoria de algoritmos durante toda a semana de provas.'],
@@ -116,23 +120,24 @@ async function main() {
       cnpj: cnpj(11222333 + i * 104729),
       email: `contato@${login.replace('.', '')}.exemplo.com`,
     })
+    const tokenEmpresa = await token(login, 'empresa123')
     for (const [nome, descricao, custoMoedas, foto] of ofertas) {
       const form = new FormData()
       form.append('dados', new Blob([JSON.stringify({ nome, descricao, custoMoedas })], { type: 'application/json' }))
       form.append('foto', new Blob([readFileSync(join(FOTOS, `${foto}.png`))], { type: 'image/png' }), `${foto}.png`)
-      vantagens[nome] = (await chamar('POST', `/empresas/${e.id}/vantagens`, form)).id
+      vantagens[nome] = (await chamar('POST', `/empresas/${e.id}/vantagens`, form, tokenEmpresa)).id
     }
     console.log('empresa', nomeFantasia, `(${ofertas.length} vantagem(ns))`)
   }
 
   for (const [prof, aluno, valor, motivo] of ENVIOS) {
     const p = await chamar('POST', '/auth/login', { login: prof, senha: 'prof123' })
-    await chamar('POST', `/professores/${p.id}/envios`, { alunoId: ids[aluno], valor, motivo })
+    await chamar('POST', `/professores/${p.id}/envios`, { alunoId: ids[aluno], valor, motivo }, p.token)
     console.log(`envio ${prof} -> ${aluno}: ${valor}`)
   }
 
   for (const [aluno, vantagem] of RESGATES) {
-    const r = await chamar('POST', `/alunos/${ids[aluno]}/resgates`, { vantagemId: vantagens[vantagem] })
+    const r = await chamar('POST', `/alunos/${ids[aluno]}/resgates`, { vantagemId: vantagens[vantagem] }, await token(aluno, 'aluno123'))
     console.log(`resgate ${aluno}: ${vantagem} (código ${r.codigo})`)
   }
 

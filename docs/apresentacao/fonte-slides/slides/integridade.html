@@ -1,0 +1,23 @@
+<section id="integridade" data-transition="fade" style="background:#0F1B3D;color:#F6F5F1;font-family:Poppins, Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:26px;font-weight:600;text-transform:uppercase;letter-spacing:3px;color:#F5B83D">Persistência</p>
+<h2 style="font-family:'Barlow Condensed', Arial, sans-serif;font-size:88px;font-weight:800;font-style:italic;text-transform:uppercase;line-height:1;color:#F6F5F1">Saldo nunca fica errado</h2>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:28px">
+<div style="display:flex;flex-direction:column;gap:16px;background:#1B2A55;padding:32px;border-left:8px solid #F5B83D;border-radius:12px">
+<h3 style="font-size:32px;font-weight:700;color:#F5B83D">Tudo ou nada</h3>
+<p style="font-size:26px;color:#C9D1E6;line-height:1.45">@Transactional: o débito, o crédito e o registro da transação são gravados juntos, ou nada é gravado.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:16px;background:#1B2A55;padding:32px;border-left:8px solid #F5B83D;border-radius:12px">
+<h3 style="font-size:32px;font-weight:700;color:#F5B83D">Contas travadas</h3>
+<p style="font-size:26px;color:#C9D1E6;line-height:1.45">SELECT … FOR UPDATE antes de conferir o saldo, sempre em ordem de id. Dois envios simultâneos não leem o mesmo saldo.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:16px;background:#1B2A55;padding:32px;border-left:8px solid #F5B83D;border-radius:12px">
+<h3 style="font-size:32px;font-weight:700;color:#F5B83D">Banco como barreira</h3>
+<p style="font-size:26px;color:#C9D1E6;line-height:1.45">CHECK saldo ≥ 0, custo &gt; 0, valor &gt; 0 e UNIQUE em CPF, CNPJ, email, login e código do cupom.</p>
+</div>
+</div>
+<p style="font-size:28px;color:#F6F5F1;line-height:1.4">Crédito semestral <b style="color:#F5B83D">idempotente</b>: se o job rodar duas vezes no mesmo semestre, o segundo crédito é ignorado.</p>
+<p style="position:absolute;left:128px;right:128px;bottom:64px;font-size:24px;color:#C9D1E6">Fonte: TransacaoService (travar, creditarSemestre) e V1__schema_inicial.sql · 11/18</p>
+<aside>Como garantimos que o saldo nunca fica errado. Primeiro, cada operação é uma transação do banco: ou tudo é gravado, ou nada. Segundo, travamos as contas antes de conferir o saldo. Sem isso, dois professores enviando ao mesmo tempo para o mesmo aluno poderiam ler o mesmo saldo, e um envio apagaria o outro. Travamos sempre na mesma ordem para evitar deadlock. Terceiro, o banco tem as próprias restrições, como última barreira caso uma regra escape do código. Por fim, o crédito semestral confere se aquele semestre já foi creditado, então rodar o job duas vezes não duplica moedas.</aside>
+</section>

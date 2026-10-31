@@ -1,0 +1,28 @@
+{
+  "v": 4,
+  "createdOnFiles": { "v": 1, "at": "2026-10-31T21:50:00Z" },
+  "lists": "css",
+  "title": "Moeda Estudantil — Arquitetura, Persistência e Tecnologias",
+  "order": [
+    "capa", "sistema", "numeros",
+    "mvc", "componentes", "requisicao",
+    "frase", "modeloer", "mapeamento", "acessodados", "integridade",
+    "custos",
+    "stack", "tutorialcrud", "tutorialjwt", "tutorialrodar",
+    "demo", "proximos"
+  ],
+  "sections": {
+    "s1": { "description": "O que o sistema faz e em que estado chegou à Sprint 3.", "start": "capa" },
+    "s2": { "description": "Arquitetura MVC, componentes e o caminho de uma requisição.", "start": "mvc" },
+    "s3": { "description": "Camada de persistência: modelo ER, mapeamento, acesso a dados e integridade.", "start": "frase" },
+    "s4": { "description": "Decisões do grupo e o custo de cada uma.", "start": "custos" },
+    "s5": { "description": "Tutorial das tecnologias escolhidas.", "start": "stack" },
+    "s6": { "description": "Demonstração ao vivo e próximos passos.", "start": "demo" }
+  },
+  "faces": {
+    "barlow-condensed": { "family": "Barlow Condensed", "href": "https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;1,800&display=swap" },
+    "poppins": { "family": "Poppins", "href": "https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" },
+    "jetbrains-mono": { "family": "JetBrains Mono", "href": "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&display=swap" }
+  },
+  "designSystems": []
+}

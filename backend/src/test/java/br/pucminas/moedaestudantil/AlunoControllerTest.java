@@ -113,23 +113,25 @@ class AlunoControllerTest {
     }
 
     @Test
-    void listaBuscaAtualizaSemTrocarSenhaEExclui() throws Exception {
+    void consultaAtualizaSemTrocarSenhaEExclui() throws Exception {
         long id = cadastrar("52998224725", "maria@email.com", "maria");
         String hashAntes = jdbc.queryForObject("SELECT senha_hash FROM usuario WHERE id = ?", String.class, id);
 
-        mvc.perform(get("/api/alunos")).andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(1)));
+        mvc.perform(get("/api/alunos/" + id).with(ComoUsuario.aluno(id)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.login").value("maria"));
 
         String edicao = json("52998224725", "maria.nova@email.com", "maria", null).replace("Maria Silva", "Maria S. Costa");
-        mvc.perform(put("/api/alunos/" + id).contentType(MediaType.APPLICATION_JSON).content(edicao))
+        mvc.perform(put("/api/alunos/" + id).with(ComoUsuario.aluno(id)).contentType(MediaType.APPLICATION_JSON).content(edicao))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.nome").value("Maria S. Costa"))
                 .andExpect(jsonPath("$.email").value("maria.nova@email.com"));
         String hashDepois = jdbc.queryForObject("SELECT senha_hash FROM usuario WHERE id = ?", String.class, id);
         assertThat(hashDepois).isEqualTo(hashAntes);
 
-        mvc.perform(delete("/api/alunos/" + id)).andExpect(status().isNoContent());
+        mvc.perform(delete("/api/alunos/" + id).with(ComoUsuario.aluno(id))).andExpect(status().isNoContent());
         em.flush(); // o teste roda numa unica transacao; forca o DELETE antes de conferir via JDBC
-        mvc.perform(get("/api/alunos/" + id))
+        mvc.perform(get("/api/alunos/" + id).with(ComoUsuario.aluno(id)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.mensagem", startsWith("Aluno " + id)));
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM usuario WHERE id = ?", Integer.class, id)).isZero();
@@ -144,7 +146,7 @@ class AlunoControllerTest {
         jdbc.update("INSERT INTO transacao (tipo, valor, data_hora, conta_origem_id, conta_destino_id, motivo) "
                 + "VALUES ('ENVIO', 10, CURRENT_TIMESTAMP, ?, ?, 'Participação')", contaProf, contaAluno);
 
-        mvc.perform(delete("/api/alunos/" + id))
+        mvc.perform(delete("/api/alunos/" + id).with(ComoUsuario.aluno(id)))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.mensagem").value("Aluno possui movimentações de moedas e não pode ser excluído"));
     }

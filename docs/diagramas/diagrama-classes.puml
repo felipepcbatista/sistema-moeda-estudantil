@@ -110,6 +110,12 @@ package "service" {
     + login(login: String, senha: String): SessaoResponse
   }
 
+  class TokenService {
+    + gerar(usuarioId: Long, perfil: Perfil, nome: String): String
+  }
+
+  AutenticacaoService --> TokenService
+
   class ProfessorService {
     + buscarPorId(id: Long): Professor
     + listarAlunos(professorId: Long): List<Aluno>
@@ -118,7 +124,6 @@ package "service" {
   class AlunoService {
     + cadastrar(dados: AlunoRequest): Aluno
     + buscarPorId(id: Long): Aluno
-    + listar(): List<Aluno>
     + atualizar(id: Long, dados: AlunoRequest): Aluno
     + excluir(id: Long): void
   }
@@ -126,7 +131,6 @@ package "service" {
   class EmpresaParceiraService {
     + cadastrar(dados: EmpresaParceiraRequest): EmpresaParceira
     + buscarPorId(id: Long): EmpresaParceira
-    + listar(): List<EmpresaParceira>
     + atualizar(id: Long, dados: EmpresaParceiraRequest): EmpresaParceira
     + excluir(id: Long): void
   }
@@ -181,6 +185,19 @@ package "service" {
   TransacaoService --> NotificacaoService
 }
 
+package "config (seguranca)" {
+  class SegurancaConfig <<Spring Security>> {
+    + filtro(http): SecurityFilterChain
+    + jwtEncoder(chave): JwtEncoder
+    + jwtDecoder(chave): JwtDecoder
+  }
+  class Acesso <<@PreAuthorize>> {
+    + ehOProprio(id: Long): boolean
+    + ehDonoDaVantagem(vantagemId: Long): boolean
+  }
+}
+
+TokenService ..> SegurancaConfig : usa JwtEncoder
 TransacaoService ..> Transacao : cria
 AlunoService ..> Aluno
 EmpresaParceiraService ..> EmpresaParceira

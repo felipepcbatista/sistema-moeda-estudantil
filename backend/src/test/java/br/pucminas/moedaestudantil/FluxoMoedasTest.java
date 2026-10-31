@@ -77,7 +77,7 @@ class FluxoMoedasTest {
     }
 
     private void enviar(long professor, long alunoId, int valor) throws Exception {
-        mvc.perform(post("/api/professores/" + professor + "/envios").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/api/professores/" + professor + "/envios").with(ComoUsuario.professor(professor)).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"alunoId\":%d,\"valor\":%d,\"motivo\":\"Participação em aula\"}".formatted(alunoId, valor)))
                 .andExpect(status().isCreated());
     }
@@ -87,7 +87,7 @@ class FluxoMoedasTest {
                 "{\"nome\":\"Almoço\",\"descricao\":\"Almoço no restaurante universitário\",\"custoMoedas\":%d}"
                         .formatted(custo).getBytes());
         MockMultipartFile foto = new MockMultipartFile("foto", "almoco.png", "image/png", PNG);
-        return idCriado(mvc.perform(multipart("/api/empresas/" + empresa + "/vantagens").file(dados).file(foto))
+        return idCriado(mvc.perform(multipart("/api/empresas/" + empresa + "/vantagens").file(dados).file(foto).with(ComoUsuario.empresa(empresa)))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString());
     }
@@ -113,18 +113,18 @@ class FluxoMoedasTest {
 
     @Test
     void envioDebitaProfessorCreditaAlunoNotificaEApareceNosExtratos() throws Exception {
-        mvc.perform(get("/api/professores/" + profAna + "/alunos")).andExpect(jsonPath("$", hasSize(1)));
+        mvc.perform(get("/api/professores/" + profAna + "/alunos").with(ComoUsuario.professor(profAna))).andExpect(jsonPath("$", hasSize(1)));
 
         enviar(profAna, aluno, 150);
 
         verify(notificacao).notificarRecebimento(any(EnvioMoedas.class));
-        mvc.perform(get("/api/professores/" + profAna + "/extrato"))
+        mvc.perform(get("/api/professores/" + profAna + "/extrato").with(ComoUsuario.professor(profAna)))
                 .andExpect(jsonPath("$.saldo").value(850))
                 .andExpect(jsonPath("$.transacoes", hasSize(2)))
                 .andExpect(jsonPath("$.transacoes[0].valor").value(-150))
                 .andExpect(jsonPath("$.transacoes[0].descricao").value("Enviado para Maria Silva"))
                 .andExpect(jsonPath("$.transacoes[1].tipo").value("CREDITO"));
-        mvc.perform(get("/api/alunos/" + aluno + "/extrato"))
+        mvc.perform(get("/api/alunos/" + aluno + "/extrato").with(ComoUsuario.aluno(aluno)))
                 .andExpect(jsonPath("$.saldo").value(150))
                 .andExpect(jsonPath("$.transacoes[0].valor").value(150))
                 .andExpect(jsonPath("$.transacoes[0].descricao").value("Recebido de Ana Souza"))
@@ -133,15 +133,15 @@ class FluxoMoedasTest {
 
     @Test
     void envioExigeSaldoMotivoEMesmaInstituicao() throws Exception {
-        mvc.perform(post("/api/professores/" + profAna + "/envios").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/api/professores/" + profAna + "/envios").with(ComoUsuario.professor(profAna)).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"alunoId\":%d,\"valor\":1001,\"motivo\":\"x\"}".formatted(aluno)))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.mensagem").value("Saldo insuficiente: você tem 1000 moedas"));
-        mvc.perform(post("/api/professores/" + profAna + "/envios").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/api/professores/" + profAna + "/envios").with(ComoUsuario.professor(profAna)).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"alunoId\":%d,\"valor\":10,\"motivo\":\"  \"}".formatted(aluno)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.campos.motivo").value("O motivo é obrigatório"));
-        mvc.perform(post("/api/professores/" + profCarla + "/envios").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/api/professores/" + profCarla + "/envios").with(ComoUsuario.professor(profCarla)).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"alunoId\":%d,\"valor\":10,\"motivo\":\"x\"}".formatted(aluno)))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.mensagem").value("O aluno não pertence à instituição do professor"));
@@ -161,10 +161,12 @@ class FluxoMoedasTest {
 
         MockMultipartFile dados = new MockMultipartFile("dados", "", "application/json",
                 "{\"nome\":\"X\",\"descricao\":\"Y\",\"custoMoedas\":10}".getBytes());
-        mvc.perform(multipart("/api/empresas/" + empresa + "/vantagens").file(dados))
+        mvc.perform(multipart("/api/empresas/" + empresa + "/vantagens").file(dados).with(ComoUsuario.empresa(empresa)))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.mensagem").value("A foto do produto é obrigatória"));
-        mvc.perform(get("/api/fotos/..%2F..%2Fpom.xml")).andExpect(status().isNotFound());
+        // tentativa de sair do diretorio de fotos: o firewall do Spring Security barra a barra codificada (400)
+        // antes de chegar ao FotoStorage, que por sua vez tambem recusaria (404)
+        mvc.perform(get("/api/fotos/..%2F..%2Fpom.xml")).andExpect(status().is4xxClientError());
     }
 
     @Test
@@ -172,7 +174,7 @@ class FluxoMoedasTest {
         long vantagem = cadastrarVantagem(80);
         enviar(profAna, aluno, 100);
 
-        String resposta = mvc.perform(post("/api/alunos/" + aluno + "/resgates").contentType(MediaType.APPLICATION_JSON)
+        String resposta = mvc.perform(post("/api/alunos/" + aluno + "/resgates").with(ComoUsuario.aluno(aluno)).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"vantagemId\":%d}".formatted(vantagem)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.saldoRestante").value(20))
@@ -183,18 +185,18 @@ class FluxoMoedasTest {
 
         verify(notificacao).enviarCupomAluno(any(ResgateVantagem.class));
         verify(notificacao).notificarParceiro(any(ResgateVantagem.class));
-        mvc.perform(get("/api/empresas/" + empresa + "/resgates"))
+        mvc.perform(get("/api/empresas/" + empresa + "/resgates").with(ComoUsuario.empresa(empresa)))
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].codigo").value(codigo))
                 .andExpect(jsonPath("$[0].aluno").value("Maria Silva"))
                 .andExpect(jsonPath("$[0].vantagem").value("Almoço"));
-        mvc.perform(get("/api/alunos/" + aluno + "/extrato"))
+        mvc.perform(get("/api/alunos/" + aluno + "/extrato").with(ComoUsuario.aluno(aluno)))
                 .andExpect(jsonPath("$.transacoes[0].valor").value(-80))
                 .andExpect(jsonPath("$.transacoes[0].codigo").value(codigo))
                 .andExpect(jsonPath("$.transacoes[0].descricao").value("Resgate: Almoço (Cantina)"));
 
         // saldo 20 < custo 80
-        mvc.perform(post("/api/alunos/" + aluno + "/resgates").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/api/alunos/" + aluno + "/resgates").with(ComoUsuario.aluno(aluno)).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"vantagemId\":%d}".formatted(vantagem)))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.mensagem").value("Saldo insuficiente: a vantagem custa 80 moedas e você tem 20"));
@@ -206,11 +208,11 @@ class FluxoMoedasTest {
         enviar(profAna, aluno, 50);
         mvc.perform(get("/api/vantagens")).andExpect(jsonPath("$", hasSize(1)));
 
-        mvc.perform(post("/api/vantagens/" + vantagem + "/desativar")).andExpect(jsonPath("$.ativa").value(false));
+        mvc.perform(post("/api/vantagens/" + vantagem + "/desativar").with(ComoUsuario.empresa(empresa))).andExpect(jsonPath("$.ativa").value(false));
 
         mvc.perform(get("/api/vantagens")).andExpect(jsonPath("$", hasSize(0)));
-        mvc.perform(get("/api/empresas/" + empresa + "/vantagens")).andExpect(jsonPath("$", hasSize(1)));
-        mvc.perform(post("/api/alunos/" + aluno + "/resgates").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(get("/api/empresas/" + empresa + "/vantagens").with(ComoUsuario.empresa(empresa))).andExpect(jsonPath("$", hasSize(1)));
+        mvc.perform(post("/api/alunos/" + aluno + "/resgates").with(ComoUsuario.aluno(aluno)).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"vantagemId\":%d}".formatted(vantagem)))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.mensagem").value("Esta vantagem não está mais disponível"));
@@ -225,7 +227,7 @@ class FluxoMoedasTest {
         // o semestre da carga inicial ja foi creditado
         assertThat(transacaoService.creditarSemestre("2026-2")).isZero();
 
-        mvc.perform(get("/api/professores/" + profAna)).andExpect(jsonPath("$.saldo").value(1700));
+        mvc.perform(get("/api/professores/" + profAna).with(ComoUsuario.professor(profAna))).andExpect(jsonPath("$.saldo").value(1700));
     }
 
     @Test

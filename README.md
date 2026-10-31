@@ -3,7 +3,8 @@
 | Sprint | Entrega | Seções |
 |---|---|---|
 | **Lab03S01** | Modelagem: casos de uso, histórias de usuário, diagrama de classes e de componentes | 1–7 |
-| **Lab03S02** | Modelo ER, estratégia de acesso a dados (ORM + Repository/DAO), CRUDs de aluno e empresa parceira (front-end + back-end) e, adiantado, o fluxo de moedas completo | 8–12 |
+| **Lab03S02** | Modelo ER, estratégia de acesso a dados (ORM + Repository/DAO), CRUDs de aluno e empresa parceira (front-end + back-end) e, adiantado, o fluxo de moedas completo | 8–11 |
+| **Lab03S03** | CRUDs na versão final (Spring Security + JWT, cada usuário só acessa os próprios dados), slides da arquitetura, da camada de persistência e tutorial das tecnologias | 12–13 |
 
 ## 1. Contexto
 
@@ -253,12 +254,10 @@ Fonte PlantUML em [`docs/diagramas/diagrama-persistencia.puml`](docs/diagramas/d
 | Método | Rota | Descrição |
 |---|---|---|
 | GET | `/api/instituicoes` | Instituições pré-cadastradas |
-| GET | `/api/alunos` | Lista alunos (com instituição e saldo) |
 | GET | `/api/alunos/{id}` | Consulta aluno |
 | POST | `/api/alunos` | Cadastra aluno (US02), saldo inicial 0 |
 | PUT | `/api/alunos/{id}` | Edita aluno (US03); senha em branco mantém a atual |
 | DELETE | `/api/alunos/{id}` | Exclui aluno; bloqueado se houver movimentação de moedas |
-| GET | `/api/empresas` | Lista empresas parceiras |
 | GET | `/api/empresas/{id}` | Consulta empresa |
 | POST | `/api/empresas` | Cadastra empresa (US04) |
 | PUT | `/api/empresas/{id}` | Edita empresa (US05) |
@@ -266,7 +265,7 @@ Fonte PlantUML em [`docs/diagramas/diagrama-persistencia.puml`](docs/diagramas/d
 
 **Respostas de erro:** `400` com erro por campo (validação), `404` (não encontrado), `422` (regra de negócio: CPF/CNPJ/email/login duplicado, senha ausente no cadastro, exclusão bloqueada). As telas exibem a mensagem geral e o erro embaixo de cada campo.
 
-**Telas (self-service):** o CRUD é feito pelo próprio dono do cadastro, como pedem US03/US05 ("só acessa e altera o próprio cadastro"). *Create* em **Sou aluno** / **Sou empresa**, que já entra no sistema ao final; *Read* e *Update* em **Meu cadastro**; *Delete* em **Meu cadastro → Excluir minha conta**, com confirmação. Não há tela pública listando todos os alunos: ela exporia CPF e endereço de terceiros. As rotas de listagem da API continuam disponíveis.
+**Telas (self-service):** o CRUD é feito pelo próprio dono do cadastro, como pedem US03/US05 ("só acessa e altera o próprio cadastro"). *Create* em **Sou aluno** / **Sou empresa**, que já entra no sistema ao final; *Read* e *Update* em **Meu cadastro**; *Delete* em **Meu cadastro → Excluir minha conta**, com confirmação. Não há tela pública listando todos os alunos: ela exporia CPF e endereço de terceiros. Na Sprint 3 as rotas de listagem geral também saíram da API (ver Seção 12).
 
 ## 11. Fluxo de moedas (Lab03S02, adiantado)
 
@@ -290,15 +289,15 @@ Implementa as histórias US01 e US06 a US10 em cima do schema que já existia, s
 - **Concorrência de saldo.** Antes de conferir o saldo, o `TransacaoService` trava as contas envolvidas (`SELECT ... FOR UPDATE`, em ordem de id para evitar deadlock). Sem isso, dois envios simultâneos poderiam ler o mesmo saldo e um sobrescrever o outro. O `CHECK (saldo >= 0)` do banco continua como última barreira.
 - **Email só depois do commit.** O `EmailNotificacaoService` monta a mensagem durante a transação e envia no `afterCommit`: nenhum email avisa de uma operação desfeita, e uma falha de SMTP não desfaz a transferência (fica registrada no log).
 - **Fotos em disco**, com nome aleatório gerado pelo servidor e servidas por `/api/fotos/{arquivo}` (componente "Armazenamento de Fotos" do diagrama de componentes).
-- **Login sem token nesta versão.** O back-end confere a senha e devolve o perfil; o front guarda a sessão no navegador. As rotas da API ainda não exigem token. A proteção com Spring Security + JWT, impedindo um usuário de agir em nome de outro, fica para a Sprint 3.
+- **Login:** nesta sprint o back-end só conferia a senha; a proteção das rotas com token entrou na Sprint 3 (Seção 12).
 
 **Rotas adicionadas:**
 
 | Método | Rota | Descrição |
 |---|---|---|
-| POST | `/api/auth/login` | Login → `{id, perfil, nome}` |
+| POST | `/api/auth/login` | Login → `{id, perfil, nome, token}` |
 | GET | `/api/professores/{id}` | Professor com saldo |
-| GET | `/api/professores/{id}/alunos` | Alunos que o professor pode reconhecer |
+| GET | `/api/professores/{id}/alunos` | Alunos que o professor pode reconhecer (só nome, curso e saldo) |
 | POST | `/api/professores/{id}/envios` | Envia moedas `{alunoId, valor, motivo}` |
 | GET | `/api/professores/{id}/extrato` | Extrato do professor |
 | GET | `/api/alunos/{id}/extrato` | Extrato do aluno |
@@ -312,11 +311,44 @@ Implementa as histórias US01 e US06 a US10 em cima do schema que já existia, s
 | GET | `/api/fotos/{arquivo}` | Foto da vantagem |
 | GET | `/api/empresas/{id}/resgates` | Resgates das vantagens da empresa, com código e aluno |
 
-**Testes automatizados** (`backend/src/test`): 21 testes de integração MockMvc rodando as mesmas migrações Flyway num H2 em modo PostgreSQL, mais testes unitários de `Conta`. Cobrem os CRUDs (cadastro, normalização, validação, duplicidade, edição sem troca de senha, exclusão e bloqueios de exclusão) e o fluxo de moedas: login por perfil, envio com débito/crédito e extratos, saldo insuficiente, motivo obrigatório, aluno de outra instituição, vantagem com foto obrigatória, resgate com código, vantagem desativada, crédito semestral acumulável e idempotente e cálculo do semestre. O fluxo também foi validado de ponta a ponta no PostgreSQL e no Mailpit.
+**Testes automatizados** (`backend/src/test`): 21 testes nesta sprint (28 após a Sprint 3) de integração MockMvc rodando as mesmas migrações Flyway num H2 em modo PostgreSQL, mais testes unitários de `Conta`. Cobrem os CRUDs (cadastro, normalização, validação, duplicidade, edição sem troca de senha, exclusão e bloqueios de exclusão) e o fluxo de moedas: login por perfil, envio com débito/crédito e extratos, saldo insuficiente, motivo obrigatório, aluno de outra instituição, vantagem com foto obrigatória, resgate com código, vantagem desativada, crédito semestral acumulável e idempotente e cálculo do semestre. O fluxo também foi validado de ponta a ponta no PostgreSQL e no Mailpit.
 
-**Fica para a Sprint 3:** proteção das rotas com Spring Security + JWT, versão final dos CRUDs e slides da arquitetura e da camada de persistência.
+## 12. CRUDs na versão final: segurança (Lab03S03)
 
-## 12. Como executar
+Até a Sprint 2, a tela escondia o que cada perfil não devia ver, mas a API aceitava qualquer requisição: quem soubesse montar a chamada conseguia editar o cadastro de outro aluno ou enviar moedas em nome de um professor. Na Sprint 3 a regra passou a valer **na API**.
+
+**Como funciona:**
+
+1. `POST /api/auth/login` confere a senha (BCrypt) e devolve um **token JWT** assinado com HS256 pela própria API (`TokenService`). O token carrega o id do usuário (`sub`), o `perfil` e o `nome`, e vale 8 horas.
+2. O front-end guarda o token na sessão e o envia em toda requisição (`Authorization: Bearer ...`). Resposta 401 leva de volta ao login com o aviso "Sua sessão expirou".
+3. O Spring Security valida a assinatura e a validade do token em cada requisição (`SegurancaConfig`, OAuth2 Resource Server) e transforma o perfil em papel (`ROLE_ALUNO`, `ROLE_PROFESSOR`, `ROLE_EMPRESA`).
+4. Cada rota declara quem pode usá-la com `@PreAuthorize`. As regras de posse ficam no componente `Acesso`: `ehOProprio(id)` (o id da rota é o do usuário logado) e `ehDonoDaVantagem(id)`.
+
+| Rota | Quem pode |
+|---|---|
+| `POST /api/auth/login`, `POST /api/alunos`, `POST /api/empresas`, `GET /api/instituicoes`, `GET /api/vantagens[/{id}]`, `GET /api/fotos/*` | Qualquer visitante |
+| `/api/alunos/{id}` (consulta, edição, exclusão), `/extrato`, `/resgates` | Só o próprio aluno |
+| `/api/professores/{id}/**` (alunos, envios, extrato) | Só o próprio professor |
+| `/api/empresas/{id}` (consulta, edição, exclusão), `/resgates`, `/vantagens` | Só a própria empresa |
+| `PUT /api/vantagens/{id}`, `/desativar`, `/reativar` | Só a empresa dona da vantagem |
+
+Sem token, ou com token inválido ou expirado: **401**. Com token válido acessando o que não é seu: **403**. As duas respostas seguem o formato de erro da API.
+
+**O que mais mudou nos CRUDs:**
+
+- **Trocar a senha exige a senha atual** (`senhaAtual`). A tela de "Meu cadastro" mostra o campo assim que a pessoa digita uma senha nova.
+- **Sem listagem geral de alunos nem de empresas na API.** `GET /api/alunos` e `GET /api/empresas` foram removidos: exporiam CPF, endereço e email de terceiros. O cadastro é self-service (cada um lê e altera só o seu).
+- **O professor vê só nome, curso e saldo dos alunos** (`AlunoResumoResponse`), sem dados pessoais.
+
+**Decisão e custo (registro):** o JWT é *stateless*: a API não guarda sessões, o que simplifica e escala. O custo é que **um token emitido não pode ser revogado antes de expirar**. Se uma senha for trocada, o token antigo continua valendo até completar as 8 horas. Mitigação adotada: validade curta. Alternativas para um sistema em produção: lista de tokens revogados ou sessão no servidor.
+
+**Testes:** 28 testes automatizados. A suíte `SegurancaTest` usa **tokens reais emitidos pelo login** e cobre: 401 sem token e com token adulterado; aluno barrado no cadastro, no extrato e no resgate de outro aluno; aluno barrado nas rotas de professor; professor barrado de gastar o saldo de outro professor; professor recebendo só o resumo dos alunos; empresa barrada nas vantagens e nos resgates de outra empresa; troca de senha com senha atual errada, ausente e correta. Também foi validado no PostgreSQL real e pela tela (login, token inválido levando ao login, troca de senha).
+
+## 13. Apresentação final (Lab03S03)
+
+Slides da apresentação (arquitetura, camada de persistência e tutorial das tecnologias, 18 slides com notas de fala): https://claude.ai/artifact/5McHAieW5BrBgzzpKYjUZm. O roteiro com a divisão do tempo, o checklist de antes da apresentação e o código-fonte dos slides estão em [`docs/apresentacao/`](docs/apresentacao/).
+
+## 14. Como executar
 
 Pré-requisitos: Java 21, Maven, Node 20+ e Docker.
 
@@ -339,7 +371,9 @@ node scripts/popular-demo.mjs
 
 O script `scripts/popular-demo.mjs` cria, pela própria API e passando pelas mesmas regras de negócio, 5 alunos, 5 empresas parceiras, 7 vantagens com foto, 7 reconhecimentos e 2 resgates. Para recomeçar do zero: `docker compose down -v`, `docker compose up -d`, reinicie o back-end e rode o script de novo.
 
-Testes do back-end: `cd backend && mvn test` (não precisam do Docker).
+Testes do back-end: `cd backend && mvn test` (28 testes; não precisam do Docker).
+
+**Segredo do JWT:** em desenvolvimento há um valor padrão em `application.properties`. Fora do ambiente local, defina a variável de ambiente `JWT_SEGREDO` (mínimo de 32 caracteres).
 
 **Emails enviados pelo sistema:** caixa de entrada do Mailpit em http://localhost:8025.
 

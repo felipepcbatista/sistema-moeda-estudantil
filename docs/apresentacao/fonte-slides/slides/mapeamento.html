@@ -1,0 +1,16 @@
+<section id="mapeamento" data-transition="fade" style="background:#0F1B3D;color:#F6F5F1;font-family:Poppins, Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:26px;font-weight:600;text-transform:uppercase;letter-spacing:3px;color:#F5B83D">Persistência</p>
+<h2 style="font-family:'Barlow Condensed', Arial, sans-serif;font-size:88px;font-weight:800;font-style:italic;text-transform:uppercase;line-height:1;color:#F6F5F1">Das classes para as tabelas</h2>
+</div>
+<table style="font-family:Poppins, Arial, sans-serif;font-size:26px;color:#F6F5F1">
+<tr style="background:#F5B83D"><th style="width:24%;color:#0F1B3D;padding:16px 20px">Classe</th><th style="width:30%;color:#0F1B3D">Mapeamento JPA</th><th style="width:46%;color:#0F1B3D">Por quê</th></tr>
+<tr style="background:#1B2A55"><td>Usuario e subclasses</td><td>Herança JOINED</td><td>Login único entre os perfis; perfis com colunas bem diferentes</td></tr>
+<tr style="background:#0F1B3D"><td>Transacao e subclasses</td><td>Herança SINGLE_TABLE</td><td>Cada subclasse soma um campo; o extrato lê uma tabela, sem joins</td></tr>
+<tr style="background:#1B2A55"><td>Endereco</td><td>@Embeddable</td><td>Objeto de valor: vira colunas da tabela aluno</td></tr>
+<tr style="background:#0F1B3D"><td>Conta</td><td>@OneToOne com cascade</td><td>Composição: nasce e morre com o dono</td></tr>
+<tr style="background:#1B2A55"><td>Vantagem</td><td>@OneToMany na empresa</td><td>Desativada, não excluída: preserva o histórico de resgates</td></tr>
+</table>
+<p style="position:absolute;left:128px;right:128px;bottom:64px;font-size:24px;color:#C9D1E6">Fonte: pacote model do back-end e README, seção 8 · 9/18</p>
+<aside>Como o diagrama de classes virou tabelas. As duas heranças usam estratégias diferentes de propósito. Usuario usa JOINED: uma tabela-mãe com o login e uma tabela por perfil. Isso garante login único entre os três perfis com uma só restrição UNIQUE e evita colunas vazias. Transacao usa SINGLE_TABLE: uma tabela só, com uma coluna tipo, porque cada subclasse acrescenta um único campo e o extrato precisa ler tudo de uma vez. Endereço é objeto de valor, e Conta é composição. Vantagem é desativada em vez de excluída, para que os cupons já emitidos continuem apontando para ela.</aside>
+</section>

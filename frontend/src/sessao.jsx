@@ -1,8 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
-import { extratoAlunoApi, professoresApi } from './api/api.js'
+import { useNavigate } from 'react-router-dom'
+import { definirToken, extratoAlunoApi, professoresApi, quandoSessaoExpirar } from './api/api.js'
 
-// Sessao do usuario logado ({ id, perfil, nome }), lembrada no navegador entre recargas.
-// Nao e um token de seguranca: a protecao das rotas no back-end (JWT) entra na Sprint 3.
+// Sessao do usuario logado ({ id, perfil, nome, token }), lembrada no navegador entre recargas.
+// O token JWT e quem autoriza cada requisicao no back-end; o perfil aqui so decide o que a tela mostra.
 const CHAVE = 'moeda-estudantil.sessao'
 const SessaoContext = createContext(null)
 
@@ -10,7 +11,8 @@ export const PAINEL = { PROFESSOR: '/professor', ALUNO: '/aluno', EMPRESA: '/emp
 
 function ler() {
   try {
-    return JSON.parse(localStorage.getItem(CHAVE))
+    const s = JSON.parse(localStorage.getItem(CHAVE))
+    return s?.token ? s : null // sessao antiga, sem token, nao vale mais
   } catch {
     return null
   }
@@ -26,31 +28,54 @@ function gravar(valor) {
 }
 
 export function SessaoProvider({ children }) {
-  const [sessao, setSessao] = useState(ler)
+  const navegar = useNavigate()
+  const [sessao, setSessao] = useState(() => {
+    const s = ler()
+    definirToken(s?.token ?? null)
+    return s
+  })
   const [saldo, setSaldo] = useState(null)
 
-  // Saldo exibido no cabecalho; as telas chamam atualizarSaldo() depois de enviar ou resgatar moedas.
+  const entrar = useCallback((s) => {
+    definirToken(s.token)
+    setSessao(s)
+    gravar(s)
+  }, [])
+
+  const sair = useCallback(() => {
+    definirToken(null)
+    setSessao(null)
+    setSaldo(null)
+    gravar(null)
+  }, [])
+
+  /** Atualiza o nome exibido (ex.: depois de editar o cadastro) mantendo o token. */
+  const renomear = useCallback((nome) => {
+    setSessao((s) => {
+      const nova = { ...s, nome }
+      gravar(nova)
+      return nova
+    })
+  }, [])
+
+  useEffect(() => {
+    quandoSessaoExpirar(() => {
+      sair()
+      navegar('/entrar', { replace: true, state: { expirou: true } })
+    })
+  }, [sair, navegar])
+
+  // Saldo exibido no cabecalho; as telas chamam setSaldo() depois de enviar ou resgatar moedas.
   const atualizarSaldo = useCallback(() => {
     if (sessao?.perfil === 'PROFESSOR') professoresApi.buscar(sessao.id).then((p) => setSaldo(p.saldo)).catch(() => {})
     else if (sessao?.perfil === 'ALUNO') extratoAlunoApi(sessao.id).then((x) => setSaldo(x.saldo)).catch(() => {})
     else setSaldo(null)
-  }, [sessao])
+  }, [sessao?.id, sessao?.perfil])
 
   useEffect(atualizarSaldo, [atualizarSaldo])
 
-  const entrar = (s) => {
-    setSessao(s)
-    gravar(s)
-  }
-
-  const sair = () => {
-    setSessao(null)
-    setSaldo(null)
-    gravar(null)
-  }
-
   return (
-    <SessaoContext.Provider value={{ sessao, entrar, sair, saldo, setSaldo, atualizarSaldo }}>
+    <SessaoContext.Provider value={{ sessao, entrar, sair, renomear, saldo, setSaldo, atualizarSaldo }}>
       {children}
     </SessaoContext.Provider>
   )

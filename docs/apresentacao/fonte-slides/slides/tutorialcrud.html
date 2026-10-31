@@ -1,0 +1,31 @@
+<section id="tutorialcrud" data-transition="fade" style="background:#F6F5F1;color:#18203A;font-family:Poppins, Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:26px;font-weight:600;text-transform:uppercase;letter-spacing:3px;color:#2B4ACB">Tutorial · Spring Boot + JPA</p>
+<h2 style="font-family:'Barlow Condensed', Arial, sans-serif;font-size:88px;font-weight:800;font-style:italic;text-transform:uppercase;line-height:1;color:#0F1B3D">Um CRUD em quatro peças</h2>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:24px">
+<div style="display:flex;flex-direction:column;gap:14px;background:#FDFCF9;padding:28px;border-left:8px solid #2B4ACB;border-radius:12px">
+<p style="font-size:24px;font-weight:600;text-transform:uppercase;letter-spacing:3px;color:#2B4ACB">1 · Entidade</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#0F1B3D;background:#EFECE4;padding:14px;border-radius:8px;line-height:1.4">@Entity<br>class Aluno<br>extends Usuario</p>
+<p style="font-size:24px;color:#4A5068;line-height:1.45">A classe do diagrama vira tabela</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:14px;background:#FDFCF9;padding:28px;border-left:8px solid #2B4ACB;border-radius:12px">
+<p style="font-size:24px;font-weight:600;text-transform:uppercase;letter-spacing:3px;color:#2B4ACB">2 · Repository</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#0F1B3D;background:#EFECE4;padding:14px;border-radius:8px;line-height:1.4">interface<br>AlunoRepository<br>extends Jpa…</p>
+<p style="font-size:24px;color:#4A5068;line-height:1.45">save, findById e delete já vêm prontos</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:14px;background:#FDFCF9;padding:28px;border-left:8px solid #F5B83D;border-radius:12px">
+<p style="font-size:24px;font-weight:600;text-transform:uppercase;letter-spacing:3px;color:#C98A0B">3 · Service</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#0F1B3D;background:#EFECE4;padding:14px;border-radius:8px;line-height:1.4">@Transactional<br>cadastrar(<br>  dados)</p>
+<p style="font-size:24px;color:#4A5068;line-height:1.45">Regras: CPF único, senha com hash</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:14px;background:#FDFCF9;padding:28px;border-left:8px solid #F5B83D;border-radius:12px">
+<p style="font-size:24px;font-weight:600;text-transform:uppercase;letter-spacing:3px;color:#C98A0B">4 · Controller</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#0F1B3D;background:#EFECE4;padding:14px;border-radius:8px;line-height:1.4">@PostMapping<br>@Valid<br>AlunoRequest</p>
+<p style="font-size:24px;color:#4A5068;line-height:1.45">Valida o JSON e devolve 201, 400 ou 422</p>
+</div>
+</div>
+<p style="font-size:28px;color:#0F1B3D;line-height:1.4;background:#FFF4DC;padding:22px 30px;border-radius:12px">Erros num formato só: <b>400</b> com erro por campo, <b>404</b> não encontrado, <b>422</b> regra de negócio. A tela mostra cada um embaixo do campo.</p>
+<p style="position:absolute;left:128px;right:128px;bottom:64px;font-size:24px;color:#7A8199">Fonte: Aluno, AlunoRepository, AlunoService, AlunoController e GlobalExceptionHandler · 14/18</p>
+<aside>Tutorial de como montamos cada CRUD, usando o de aluno como exemplo. Primeiro a entidade, que é a classe do diagrama com anotações. Depois o repository: uma interface que estende JpaRepository, e o Spring entrega salvar, buscar e excluir prontos. O service tem as regras e a anotação Transactional. O controller recebe o JSON, valida com Valid e as anotações do DTO, como CPF válido e email válido, e chama o service. Por fim, um handler global padroniza os erros: 400 é dado inválido, 404 é registro inexistente e 422 é regra de negócio, como CPF duplicado ou saldo insuficiente.</aside>
+</section>

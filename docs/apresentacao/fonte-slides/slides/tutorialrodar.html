@@ -1,0 +1,16 @@
+<section id="tutorialrodar" data-transition="fade" style="background:#F6F5F1;color:#18203A;font-family:Poppins, Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:26px;font-weight:600;text-transform:uppercase;letter-spacing:3px;color:#2B4ACB">Tutorial · Docker, Flyway e Vite</p>
+<h2 style="font-family:'Barlow Condensed', Arial, sans-serif;font-size:88px;font-weight:800;font-style:italic;text-transform:uppercase;line-height:1;color:#0F1B3D">Do clone ao sistema no ar</h2>
+</div>
+<table style="font-family:Poppins, Arial, sans-serif;font-size:26px;color:#18203A">
+<tr style="background:#2B4ACB"><th style="width:8%;color:#F6F5F1;padding:14px 20px">#</th><th style="width:46%;color:#F6F5F1">Comando</th><th style="width:46%;color:#F6F5F1">O que acontece</th></tr>
+<tr style="background:#FDFCF9"><td>1</td><td style="font-family:'JetBrains Mono', 'Courier New', monospace">docker compose up -d</td><td>PostgreSQL na porta 5434 e Mailpit em :8025</td></tr>
+<tr style="background:#EFECE4"><td>2</td><td style="font-family:'JetBrains Mono', 'Courier New', monospace">mvn spring-boot:run</td><td>Flyway cria o schema e a carga inicial; API em :8080</td></tr>
+<tr style="background:#FDFCF9"><td>3</td><td style="font-family:'JetBrains Mono', 'Courier New', monospace">npm install &amp;&amp; npm run dev</td><td>Front em :5180, repassando /api ao back-end</td></tr>
+<tr style="background:#EFECE4"><td>4</td><td style="font-family:'JetBrains Mono', 'Courier New', monospace">node scripts/popular-demo.mjs</td><td>Alunos, empresas, vantagens e transações pela própria API</td></tr>
+<tr style="background:#FDFCF9"><td>5</td><td style="font-family:'JetBrains Mono', 'Courier New', monospace">mvn test</td><td>28 testes, sem precisar de Docker</td></tr>
+</table>
+<p style="position:absolute;left:128px;right:128px;bottom:64px;font-size:24px;color:#7A8199">Fonte: README, seção 14 (Como executar) · 16/18</p>
+<aside>Como qualquer pessoa sobe o sistema a partir do repositório. O Docker Compose sobe o banco e o servidor de email de teste. O back-end, ao subir, roda as migrações do Flyway, então o banco nunca é criado à mão. O front sobe com o Vite. O script de demonstração cria os dados pela própria API, com o token de cada ator, então os dados de exemplo passam pelas mesmas regras de negócio e de segurança de um usuário real. E os 28 testes rodam sem Docker, num banco em memória que executa as mesmas migrações.</aside>
+</section>

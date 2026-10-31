@@ -5,13 +5,13 @@ import Modal from '../components/Modal.jsx'
 import { authApi, empresasApi, lerErro } from '../api/api.js'
 import { PAINEL, useSessao } from '../sessao.jsx'
 
-const VAZIO = { nomeFantasia: '', cnpj: '', email: '', login: '', senha: '' }
+const VAZIO = { nomeFantasia: '', cnpj: '', email: '', login: '', senha: '', senhaAtual: '' }
 
 /** CRUD da empresa parceira (US04, US05), com o mesmo comportamento do AlunoForm. */
 export default function EmpresaForm({ id }) {
   const editando = Boolean(id)
   const navegar = useNavigate()
-  const { entrar, sair } = useSessao()
+  const { entrar, sair, renomear } = useSessao()
 
   const [dados, setDados] = useState(VAZIO)
   const [erro, setErro] = useState({ mensagem: null, campos: {} })
@@ -23,7 +23,7 @@ export default function EmpresaForm({ id }) {
     if (editando) {
       empresasApi
         .buscar(id)
-        .then((e) => setDados({ ...e, senha: '' }))
+        .then((e) => setDados({ ...e, senha: '', senhaAtual: '' }))
         .catch((e) => setErro(lerErro(e)))
     }
   }, [id, editando])
@@ -41,12 +41,13 @@ export default function EmpresaForm({ id }) {
       email: dados.email,
       login: dados.login,
       senha: dados.senha === '' ? null : dados.senha,
+      senhaAtual: dados.senhaAtual === '' ? null : dados.senhaAtual,
     }
     try {
       if (editando) {
         const emp = await empresasApi.atualizar(id, corpo)
-        entrar({ id: emp.id, perfil: 'EMPRESA', nome: emp.nomeFantasia })
-        setDados({ ...dados, senha: '' })
+        renomear(emp.nomeFantasia)
+        setDados({ ...dados, senha: '', senhaAtual: '' })
         setAviso('Cadastro atualizado.')
       } else {
         await empresasApi.cadastrar(corpo)
@@ -109,6 +110,17 @@ export default function EmpresaForm({ id }) {
               erro={c.senha}
               largura="l2"
             />
+            {editando && dados.senha !== '' && (
+              <Campo
+                rotulo="Senha atual (para confirmar a troca)"
+                nome="senhaAtual"
+                type="password"
+                autoComplete="current-password"
+                value={dados.senhaAtual}
+                onChange={alterar}
+                largura="l2"
+              />
+            )}
           </div>
         </fieldset>
 

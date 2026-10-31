@@ -3,6 +3,32 @@ import axios from 'axios'
 // Cliente HTTP (componente "Cliente HTTP (Axios)" do diagrama de componentes).
 const http = axios.create({ baseURL: '/api' })
 
+// Token JWT da sessao: enviado em toda requisicao; resposta 401 (token ausente, invalido ou expirado)
+// avisa a sessao para sair e voltar ao login.
+let token = null
+let aoExpirar = () => {}
+
+export function definirToken(novo) {
+  token = novo
+}
+
+export function quandoSessaoExpirar(callback) {
+  aoExpirar = callback
+}
+
+http.interceptors.request.use((config) => {
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
+
+http.interceptors.response.use(
+  (resposta) => resposta,
+  (erro) => {
+    if (erro.response?.status === 401 && !erro.config.url.endsWith('/auth/login')) aoExpirar()
+    return Promise.reject(erro)
+  },
+)
+
 export const instituicoesApi = {
   listar: () => http.get('/instituicoes').then((r) => r.data),
 }

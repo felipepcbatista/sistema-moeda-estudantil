@@ -1,7 +1,5 @@
 package br.pucminas.moedaestudantil.service;
 
-import java.util.List;
-
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,18 +53,16 @@ public class AlunoService {
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Aluno", id));
     }
 
-    @Transactional(readOnly = true)
-    public List<Aluno> listar() {
-        return alunoRepository.findAllByOrderByNomeAsc();
-    }
-
-    /** US03: mesmas validacoes do cadastro; senha em branco mantem a atual. */
+    /** US03: mesmas validacoes do cadastro; senha em branco mantem a atual, trocar exige a senha atual. */
     @Transactional
     public Aluno atualizar(Long id, AlunoRequest dados) {
         Aluno aluno = buscarPorId(id);
         validarUnicidade(dados, id);
         aplicar(aluno, dados);
         if (dados.senha() != null && !dados.senha().isBlank()) {
+            if (!aluno.autenticar(dados.senhaAtual(), passwordEncoder)) {
+                throw new RegraNegocioException("Senha atual incorreta");
+            }
             aluno.setSenhaHash(passwordEncoder.encode(dados.senha()));
         }
         return aluno;

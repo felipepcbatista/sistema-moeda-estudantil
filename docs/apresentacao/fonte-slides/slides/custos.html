@@ -1,0 +1,15 @@
+<section id="custos" data-transition="fade" style="background:#F6F5F1;color:#18203A;font-family:Poppins, Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:44px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:26px;font-weight:600;text-transform:uppercase;letter-spacing:3px;color:#2B4ACB">Decisões do grupo</p>
+<h2 style="font-family:'Barlow Condensed', Arial, sans-serif;font-size:88px;font-weight:800;font-style:italic;text-transform:uppercase;line-height:1;color:#0F1B3D">O que cada escolha custou</h2>
+</div>
+<table style="font-family:Poppins, Arial, sans-serif;font-size:25px;color:#18203A">
+<tr style="background:#2B4ACB"><th style="width:22%;color:#F6F5F1;padding:14px 20px">Decisão</th><th style="width:34%;color:#F6F5F1">Ganho</th><th style="width:44%;color:#F6F5F1">Custo ou risco</th></tr>
+<tr style="background:#FDFCF9"><td><b>JWT stateless</b></td><td>API não guarda sessão; simples de escalar</td><td>Token emitido não pode ser revogado: vale até expirar (8 h), mesmo após trocar a senha</td></tr>
+<tr style="background:#EFECE4"><td><b>H2 nos testes</b></td><td>Testes rápidos, sem Docker</td><td>Escondeu um bug: CHAR(n) vira bpchar no PostgreSQL. Só apareceu rodando no banco real</td></tr>
+<tr style="background:#FDFCF9"><td><b>“Seus alunos” = mesma instituição</b></td><td>Usa o vínculo que o enunciado define</td><td><b>Hipótese, não validada com a professora:</b> não há turma no modelo</td></tr>
+<tr style="background:#EFECE4"><td><b>Sem listagem geral</b></td><td>Não expõe CPF e endereço de terceiros</td><td>Não há tela de administração; se a avaliação pedir uma, precisa ser criada</td></tr>
+</table>
+<p style="position:absolute;left:128px;right:128px;bottom:64px;font-size:24px;color:#7A8199">Fonte: README, seções 9, 11 e 12 (decisões registradas em cada sprint) · 12/18</p>
+<aside>Slide de contraponto: não fizemos só escolhas boas, e cada uma tem preço. JWT sem estado é simples, mas não dá para invalidar um token antes de ele expirar. Mitigamos com validade curta, e em produção usaríamos uma lista de tokens revogados. Usar H2 nos testes deixou os testes rápidos, mas escondeu um bug de tipo de coluna que só apareceu no PostgreSQL real. Desde então, todo fluxo é validado também no banco real. A regra de que o professor só reconhece alunos da própria instituição é uma hipótese nossa: queremos validar com a professora. E tirar a listagem geral protege dados pessoais, mas deixa o sistema sem tela de administração.</aside>
+</section>

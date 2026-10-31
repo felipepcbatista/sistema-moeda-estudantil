@@ -4,27 +4,35 @@
 skinparam componentStyle uml2
 
 package "Front-end (React + Vite) — View" {
-  component "Páginas de Aluno" as PagAluno
-  component "Páginas de Professor" as PagProf
-  component "Páginas de Empresa Parceira" as PagEmp
+  component "Painel do Aluno" as PagAluno
+  component "Painel do Professor" as PagProf
+  component "Painel da Empresa Parceira" as PagEmp
+  component "Sessão (token JWT)" as Sessao
   component "Cliente HTTP (Axios)" as Http
 }
 
 package "Back-end (Spring Boot) — MVC" {
 
+  component "Segurança (Spring Security + JWT, regras de posse)" as Sec
+
   package "Controller" {
     component "AutenticacaoController" as CAuth
     component "AlunoController" as CAluno
+    component "ProfessorController" as CProf
     component "EmpresaParceiraController" as CEmp
     component "VantagemController" as CVant
-    component "TransacaoController" as CTrans
+    component "InstituicaoEnsinoController" as CInst
+    component "FotoController" as CFoto
   }
 
   package "Service (regras de negócio)" {
     component "AutenticacaoService" as SAuth
+    component "TokenService" as SToken
     component "AlunoService" as SAluno
+    component "ProfessorService" as SProf
     component "EmpresaParceiraService" as SEmp
     component "VantagemService" as SVant
+    component "InstituicaoEnsinoService" as SInst
     component "TransacaoService" as STrans
     component "NotificacaoService" as SNotif
     component "Agendador de Crédito Semestral" as Job
@@ -37,9 +45,8 @@ package "Back-end (Spring Boot) — MVC" {
   package "Persistência" {
     component "Repositories (Spring Data JPA)" as Repo
     component "Armazenamento de Fotos" as Fotos
+    component "Migrações (Flyway)" as Flyway
   }
-
-  component "Segurança (Spring Security + JWT)" as Sec
 }
 
 database "PostgreSQL" as DB
@@ -50,19 +57,28 @@ interface "API REST (JSON)" as API
 PagAluno --> Http
 PagProf --> Http
 PagEmp --> Http
+Sessao --> Http : Authorization: Bearer
 Http --> API
 API - Sec
 Sec --> CAuth
 Sec --> CAluno
+Sec --> CProf
 Sec --> CEmp
 Sec --> CVant
-Sec --> CTrans
+Sec --> CInst
+Sec --> CFoto
 
 CAuth --> SAuth
+SAuth --> SToken
 CAluno --> SAluno
+CAluno --> STrans : extrato, resgate
+CProf --> SProf
+CProf --> STrans : envio, extrato
 CEmp --> SEmp
+CEmp --> STrans : resgates recebidos
 CVant --> SVant
-CTrans --> STrans
+CInst --> SInst
+CFoto --> Fotos
 Job --> STrans
 
 STrans --> SNotif
@@ -70,11 +86,14 @@ SVant --> Fotos
 
 SAuth --> Repo
 SAluno --> Repo
+SProf --> Repo
 SEmp --> Repo
 SVant --> Repo
+SInst --> Repo
 STrans --> Repo
 Repo ..> Entidades
 Repo --> DB : JDBC
+Flyway --> DB : versiona o schema
 SNotif --> SMTP : JavaMailSender
 
 @enduml

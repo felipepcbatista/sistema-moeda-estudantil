@@ -1,0 +1,12 @@
+<section id="componentes" data-transition="fade" style="background:#0F1B3D;color:#F6F5F1;font-family:Poppins, Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:26px;font-weight:600;text-transform:uppercase;letter-spacing:3px;color:#F5B83D">Arquitetura</p>
+<h2 style="font-family:'Barlow Condensed', Arial, sans-serif;font-size:88px;font-weight:800;font-style:italic;text-transform:uppercase;line-height:1;color:#F6F5F1">Diagrama de componentes</h2>
+</div>
+<div style="display:flex;background:#F6F5F1;padding:24px;border-radius:16px">
+<img src="/_blob/0ff491cf485aee50db03872e50170ef1" alt="Diagrama de componentes: front-end React com painéis, sessão e cliente Axios chamando a API REST; no back-end, a camada de segurança encaminha para sete controllers, que usam os services; os services usam os repositories Spring Data JPA, o armazenamento de fotos e o serviço de notificação; o banco PostgreSQL é versionado pelo Flyway e os emails saem pelo servidor SMTP" style="width:1616px;height:474px;object-fit:contain">
+</div>
+<p style="font-size:28px;color:#C9D1E6;line-height:1.4">Toda requisição passa primeiro pela <b style="color:#F5B83D">segurança</b>. Os serviços externos são só dois: <b style="color:#F5B83D">PostgreSQL</b> e o <b style="color:#F5B83D">servidor SMTP</b>.</p>
+<p style="position:absolute;left:128px;right:128px;bottom:64px;font-size:24px;color:#C9D1E6">Fonte: docs/diagramas/diagrama-componentes.puml (atualizado na S03) · 5/18</p>
+<aside>Mostrar o diagrama de componentes, atualizado nesta sprint para bater com o código. Ler da esquerda para a direita. No front, os três painéis usam o mesmo cliente HTTP, que anexa o token. No back-end, a segurança é a porta de entrada: nenhum controller é alcançado sem passar por ela. Abaixo ficam os services, e só eles falam com os repositories. Destacar o TransacaoService: é o único que mexe em saldo, e ele também chama a notificação por email. Na S02 ainda havia um TransacaoController no diagrama que não existia no código. Corrigimos, porque alinhar modelo e código é critério de avaliação.</aside>
+</section>

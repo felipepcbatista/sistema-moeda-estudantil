@@ -1,0 +1,34 @@
+<section id="requisicao" data-transition="fade" style="background:#F6F5F1;color:#18203A;font-family:Poppins, Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:26px;font-weight:600;text-transform:uppercase;letter-spacing:3px;color:#2B4ACB">Arquitetura</p>
+<h2 style="font-family:'Barlow Condensed', Arial, sans-serif;font-size:88px;font-weight:800;font-style:italic;text-transform:uppercase;line-height:1;color:#0F1B3D">Caminho de “enviar 50 moedas”</h2>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px">
+<div style="display:flex;flex-direction:column;gap:10px;background:#FDFCF9;padding:28px;border-left:8px solid #2B4ACB;border-radius:12px">
+<p style="font-size:24px;font-weight:600;text-transform:uppercase;letter-spacing:3px;color:#2B4ACB">1 · Tela</p>
+<p style="font-size:26px;color:#4A5068;line-height:1.45">Axios faz POST /professores/1/envios com o token no cabeçalho</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;background:#FDFCF9;padding:28px;border-left:8px solid #2B4ACB;border-radius:12px">
+<p style="font-size:24px;font-weight:600;text-transform:uppercase;letter-spacing:3px;color:#2B4ACB">2 · Segurança</p>
+<p style="font-size:26px;color:#4A5068;line-height:1.45">Valida a assinatura do JWT e confere: é professor? É o professor 1?</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;background:#FDFCF9;padding:28px;border-left:8px solid #2B4ACB;border-radius:12px">
+<p style="font-size:24px;font-weight:600;text-transform:uppercase;letter-spacing:3px;color:#2B4ACB">3 · Controller</p>
+<p style="font-size:26px;color:#4A5068;line-height:1.45">Valida o DTO: aluno informado, valor &gt; 0, motivo não vazio</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;background:#FDFCF9;padding:28px;border-left:8px solid #F5B83D;border-radius:12px">
+<p style="font-size:24px;font-weight:600;text-transform:uppercase;letter-spacing:3px;color:#C98A0B">4 · Service</p>
+<p style="font-size:26px;color:#4A5068;line-height:1.45">Mesma instituição? Trava as duas contas, confere o saldo, debita e credita</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;background:#FDFCF9;padding:28px;border-left:8px solid #F5B83D;border-radius:12px">
+<p style="font-size:24px;font-weight:600;text-transform:uppercase;letter-spacing:3px;color:#C98A0B">5 · Repository</p>
+<p style="font-size:26px;color:#4A5068;line-height:1.45">Grava o envio e os dois saldos numa só transação do banco</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;background:#FDFCF9;padding:28px;border-left:8px solid #F5B83D;border-radius:12px">
+<p style="font-size:24px;font-weight:600;text-transform:uppercase;letter-spacing:3px;color:#C98A0B">6 · Depois do commit</p>
+<p style="font-size:26px;color:#4A5068;line-height:1.45">Email ao aluno. Se o SMTP falhar, a transferência não é desfeita</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;right:128px;bottom:64px;font-size:24px;color:#7A8199">Fonte: ProfessorController, TransacaoService.enviarMoedas e EmailNotificacaoService (back-end) · 6/18</p>
+<aside>Seguir uma requisição real de ponta a ponta mostra a arquitetura funcionando. Os passos 1 a 3 são da borda: a tela, a segurança e o controller. Os passos 4 a 6 são do Model. Três pontos para destacar. No passo 2, um aluno que tentasse chamar essa rota com o próprio token receberia 403. No passo 4, as contas são travadas antes de conferir o saldo, assunto do slide de integridade. No passo 6, o email só sai depois que o banco confirmou, então nunca avisamos de uma transferência que foi desfeita.</aside>
+</section>
