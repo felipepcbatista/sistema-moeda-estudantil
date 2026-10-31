@@ -18,6 +18,12 @@ public interface AlunoRepository extends JpaRepository<Aluno, Long> {
     @EntityGraph(attributePaths = {"instituicao", "conta"})
     List<Aluno> findAllByOrderByNomeAsc();
 
+    /** Alunos que o professor pode reconhecer: os da mesma instituicao. */
+    @EntityGraph(attributePaths = {"instituicao", "conta"})
+    List<Aluno> findByInstituicaoIdOrderByNomeAsc(Long instituicaoId);
+
+    Optional<Aluno> findByContaId(Long contaId);
+
     boolean existsByCpf(String cpf);
 
     boolean existsByCpfAndIdNot(String cpf, Long id);

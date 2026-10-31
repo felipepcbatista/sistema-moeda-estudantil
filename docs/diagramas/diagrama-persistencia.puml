@@ -13,6 +13,10 @@ package "service" {
   class AlunoService
   class EmpresaParceiraService
   class InstituicaoEnsinoService
+  class AutenticacaoService
+  class ProfessorService
+  class VantagemService
+  class TransacaoService
 }
 
 package "repository (Spring Data JPA — DAO)" {
@@ -23,11 +27,14 @@ package "repository (Spring Data JPA — DAO)" {
     + delete(entidade: T): void
   }
   interface UsuarioRepository {
+    + findByLogin(login: String): Optional<Usuario>
     + existsByLogin(login: String): boolean
     + existsByLoginAndIdNot(login: String, id: Long): boolean
   }
   interface AlunoRepository {
     + findAllByOrderByNomeAsc(): List<Aluno>
+    + findByInstituicaoIdOrderByNomeAsc(id: Long): List<Aluno>
+    + findByContaId(contaId: Long): Optional<Aluno>
     + existsByCpf(cpf: String): boolean
     + existsByEmail(email: String): boolean
   }
@@ -43,10 +50,16 @@ package "repository (Spring Data JPA — DAO)" {
     + findExtrato(contaId: Long): List<Transacao>
     + existsMovimentacao(contaId: Long): boolean
     + existsResgateDaEmpresa(empresaId: Long): boolean
+    + findResgatesDaEmpresa(empresaId: Long): List<ResgateVantagem>
+    + existsCodigoResgate(codigo: String): boolean
+    + existsCreditoSemestre(contaId: Long, semestre: String): boolean
   }
-  interface ProfessorRepository
+  interface ProfessorRepository {
+    + findByContaId(contaId: Long): Optional<Professor>
+  }
   interface VantagemRepository {
     + findByAtivaTrueOrderByNomeAsc(): List<Vantagem>
+    + findByEmpresaIdOrderByNomeAsc(id: Long): List<Vantagem>
   }
 }
 
@@ -64,6 +77,16 @@ EmpresaParceiraService --> EmpresaParceiraRepository
 EmpresaParceiraService --> UsuarioRepository
 EmpresaParceiraService --> TransacaoRepository
 InstituicaoEnsinoService --> InstituicaoEnsinoRepository
+AutenticacaoService --> UsuarioRepository
+ProfessorService --> ProfessorRepository
+ProfessorService --> AlunoRepository
+VantagemService --> VantagemRepository
+VantagemService --> EmpresaParceiraRepository
+TransacaoService --> TransacaoRepository
+TransacaoService --> ProfessorRepository
+TransacaoService --> AlunoRepository
+TransacaoService --> VantagemRepository
+TransacaoService ..> Hibernate : SELECT ... FOR UPDATE\n(trava as contas)
 
 JpaRepository <|-- UsuarioRepository
 JpaRepository <|-- AlunoRepository

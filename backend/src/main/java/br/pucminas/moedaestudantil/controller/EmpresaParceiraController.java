@@ -16,7 +16,9 @@ import org.springframework.web.bind.annotation.RestController;
 import br.pucminas.moedaestudantil.dto.EmpresaParceiraRequest;
 import br.pucminas.moedaestudantil.dto.EmpresaParceiraResponse;
 import br.pucminas.moedaestudantil.model.EmpresaParceira;
+import br.pucminas.moedaestudantil.dto.ResgateEmpresaResponse;
 import br.pucminas.moedaestudantil.service.EmpresaParceiraService;
+import br.pucminas.moedaestudantil.service.TransacaoService;
 import jakarta.validation.Valid;
 
 @RestController
@@ -24,9 +26,11 @@ import jakarta.validation.Valid;
 public class EmpresaParceiraController {
 
     private final EmpresaParceiraService service;
+    private final TransacaoService transacaoService;
 
-    public EmpresaParceiraController(EmpresaParceiraService service) {
+    public EmpresaParceiraController(EmpresaParceiraService service, TransacaoService transacaoService) {
         this.service = service;
+        this.transacaoService = transacaoService;
     }
 
     @GetMapping
@@ -49,6 +53,12 @@ public class EmpresaParceiraController {
     @PutMapping("/{id}")
     public EmpresaParceiraResponse atualizar(@PathVariable Long id, @Valid @RequestBody EmpresaParceiraRequest dados) {
         return EmpresaParceiraResponse.from(service.atualizar(id, dados));
+    }
+
+    @GetMapping("/{id}/resgates")
+    public List<ResgateEmpresaResponse> resgates(@PathVariable Long id) {
+        service.buscarPorId(id);
+        return transacaoService.resgatesDaEmpresa(id);
     }
 
     @DeleteMapping("/{id}")

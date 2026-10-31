@@ -3,7 +3,7 @@
 | Sprint | Entrega | Seções |
 |---|---|---|
 | **Lab03S01** | Modelagem: casos de uso, histórias de usuário, diagrama de classes e de componentes | 1–7 |
-| **Lab03S02** | Modelo ER, estratégia de acesso a dados (ORM + Repository/DAO), CRUDs de aluno e empresa parceira (front-end + back-end) | 8–11 |
+| **Lab03S02** | Modelo ER, estratégia de acesso a dados (ORM + Repository/DAO), CRUDs de aluno e empresa parceira (front-end + back-end) e, adiantado, o fluxo de moedas completo | 8–12 |
 
 ## 1. Contexto
 
@@ -266,18 +266,62 @@ Fonte PlantUML em [`docs/diagramas/diagrama-persistencia.puml`](docs/diagramas/d
 
 **Respostas de erro:** `400` com erro por campo (validação), `404` (não encontrado), `422` (regra de negócio: CPF/CNPJ/email/login duplicado, senha ausente no cadastro, exclusão bloqueada). As telas exibem a mensagem geral e o erro embaixo de cada campo.
 
-**Telas:** listagem e formulário de aluno (dados pessoais, vínculo acadêmico com seleção da instituição, endereço, acesso) e de empresa parceira.
+**Telas (self-service):** o CRUD é feito pelo próprio dono do cadastro, como pedem US03/US05 ("só acessa e altera o próprio cadastro"). *Create* em **Sou aluno** / **Sou empresa**, que já entra no sistema ao final; *Read* e *Update* em **Meu cadastro**; *Delete* em **Meu cadastro → Excluir minha conta**, com confirmação. Não há tela pública listando todos os alunos: ela exporia CPF e endereço de terceiros. As rotas de listagem da API continuam disponíveis.
 
-**Testes automatizados** (`backend/src/test`): 13 testes, com testes de integração MockMvc rodando as mesmas migrações Flyway num H2 em modo PostgreSQL, cobrindo cadastro, normalização, validação, duplicidade (inclusive login de professor), edição sem troca de senha, exclusão e os dois bloqueios de exclusão, além de testes unitários de `Conta`.
+## 11. Fluxo de moedas (Lab03S02, adiantado)
 
-**Fica para a Sprint 3:** autenticação (Spring Security + JWT) e restrição de cada perfil ao próprio cadastro, versão final dos CRUDs e slides da arquitetura e da camada de persistência.
+Implementa as histórias US01 e US06 a US10 em cima do schema que já existia, sem migração nova.
 
-## 11. Como executar
+| Etapa | Quem | Tela | Regras |
+|---|---|---|---|
+| Entrar | Todos | **Entrar** | Confere login e senha (hash BCrypt) e identifica o perfil, que define o menu (US01). |
+| Crédito semestral | Sistema | — | Job `@Scheduled` em 1º/fev e 1º/ago, e também na subida da aplicação. Soma 1.000 moedas ao saldo de cada professor e é idempotente por semestre: rodar de novo não credita duas vezes (RN04). |
+| Enviar moedas | Professor | **Reconhecer alunos** → botão *Reconhecer* | Exige saldo suficiente, quantidade > 0 e motivo; o aluno precisa ser da instituição do professor. Débito, crédito e registro numa só transação; o aluno recebe email (US07, RN05, RN06). |
+| Cadastrar vantagens | Empresa | **Painel** → *Nova vantagem* | Nome, descrição, foto (JPG/PNG/WEBP/GIF, até 5 MB) e custo > 0. Desativar tira a vantagem da vitrine e preserva o histórico de resgates (US06, RN08). |
+| Resgatar | Aluno | **Vantagens** | Só vantagens ativas; exige saldo. Gera código único de 8 caracteres e envia dois emails com o mesmo código: cupom ao aluno e aviso à empresa (US09, US10, RN09, RN10). |
+| Extrato | Professor e aluno | **Extrato** | Saldo e transações da mais recente para a mais antiga, com sinal do ponto de vista de quem consulta (US08). |
+| Conferir troca | Empresa | **Painel** → *Conferir código* | A empresa digita o código apresentado pelo aluno e vê se é válido, de qual vantagem e de qual aluno; lista todos os resgates recebidos (RN10). |
+
+**Painéis por perfil:** cada ator entra num painel próprio. O professor vê saldo, data do próximo crédito, alunos da instituição e reconhecimentos recentes. O aluno vê saldo, reconhecimentos recebidos, a vitrine (com quanto falta para cada vantagem) e os cupons. A empresa vê a conferência de código, as suas vantagens e os resgates recebidos.
+
+**Decisões de implementação:**
+
+- **"Seus alunos" = alunos da mesma instituição.** O enunciado não modela turma; o vínculo explícito do professor é com a instituição (RN03). O envio para aluno de outra instituição é recusado.
+- **Concorrência de saldo.** Antes de conferir o saldo, o `TransacaoService` trava as contas envolvidas (`SELECT ... FOR UPDATE`, em ordem de id para evitar deadlock). Sem isso, dois envios simultâneos poderiam ler o mesmo saldo e um sobrescrever o outro. O `CHECK (saldo >= 0)` do banco continua como última barreira.
+- **Email só depois do commit.** O `EmailNotificacaoService` monta a mensagem durante a transação e envia no `afterCommit`: nenhum email avisa de uma operação desfeita, e uma falha de SMTP não desfaz a transferência (fica registrada no log).
+- **Fotos em disco**, com nome aleatório gerado pelo servidor e servidas por `/api/fotos/{arquivo}` (componente "Armazenamento de Fotos" do diagrama de componentes).
+- **Login sem token nesta versão.** O back-end confere a senha e devolve o perfil; o front guarda a sessão no navegador. As rotas da API ainda não exigem token. A proteção com Spring Security + JWT, impedindo um usuário de agir em nome de outro, fica para a Sprint 3.
+
+**Rotas adicionadas:**
+
+| Método | Rota | Descrição |
+|---|---|---|
+| POST | `/api/auth/login` | Login → `{id, perfil, nome}` |
+| GET | `/api/professores/{id}` | Professor com saldo |
+| GET | `/api/professores/{id}/alunos` | Alunos que o professor pode reconhecer |
+| POST | `/api/professores/{id}/envios` | Envia moedas `{alunoId, valor, motivo}` |
+| GET | `/api/professores/{id}/extrato` | Extrato do professor |
+| GET | `/api/alunos/{id}/extrato` | Extrato do aluno |
+| POST | `/api/alunos/{id}/resgates` | Resgata `{vantagemId}` → código do cupom |
+| GET | `/api/vantagens` | Vantagens ativas (vitrine) |
+| GET | `/api/vantagens/{id}` | Consulta vantagem |
+| GET | `/api/empresas/{id}/vantagens` | Vantagens da empresa (ativas e desativadas) |
+| POST | `/api/empresas/{id}/vantagens` | Cadastra vantagem (multipart: `dados` JSON + `foto`) |
+| PUT | `/api/vantagens/{id}` | Edita vantagem (foto opcional) |
+| POST | `/api/vantagens/{id}/desativar` · `/reativar` | Liga/desliga a vantagem na vitrine |
+| GET | `/api/fotos/{arquivo}` | Foto da vantagem |
+| GET | `/api/empresas/{id}/resgates` | Resgates das vantagens da empresa, com código e aluno |
+
+**Testes automatizados** (`backend/src/test`): 21 testes de integração MockMvc rodando as mesmas migrações Flyway num H2 em modo PostgreSQL, mais testes unitários de `Conta`. Cobrem os CRUDs (cadastro, normalização, validação, duplicidade, edição sem troca de senha, exclusão e bloqueios de exclusão) e o fluxo de moedas: login por perfil, envio com débito/crédito e extratos, saldo insuficiente, motivo obrigatório, aluno de outra instituição, vantagem com foto obrigatória, resgate com código, vantagem desativada, crédito semestral acumulável e idempotente e cálculo do semestre. O fluxo também foi validado de ponta a ponta no PostgreSQL e no Mailpit.
+
+**Fica para a Sprint 3:** proteção das rotas com Spring Security + JWT, versão final dos CRUDs e slides da arquitetura e da camada de persistência.
+
+## 12. Como executar
 
 Pré-requisitos: Java 21, Maven, Node 20+ e Docker.
 
 ```bash
-# 1. Banco (PostgreSQL 16 na porta 5434 do host)
+# 1. Banco (PostgreSQL 16 na porta 5434) e servidor de email de teste (Mailpit)
 docker compose up -d
 
 # 2. Back-end (http://localhost:8080); o Flyway cria o schema e a carga inicial na primeira subida
@@ -288,8 +332,31 @@ mvn spring-boot:run
 cd frontend
 npm install
 npm run dev
+
+# 4. (opcional) Dados de demonstração, com o back-end rodando e o banco recém-criado
+node scripts/popular-demo.mjs
 ```
+
+O script `scripts/popular-demo.mjs` cria, pela própria API e passando pelas mesmas regras de negócio, 5 alunos, 5 empresas parceiras, 7 vantagens com foto, 7 reconhecimentos e 2 resgates. Para recomeçar do zero: `docker compose down -v`, `docker compose up -d`, reinicie o back-end e rode o script de novo.
 
 Testes do back-end: `cd backend && mvn test` (não precisam do Docker).
 
-Professores de exemplo: `prof.ana`, `prof.bruno`, `prof.carla`, todos com senha `prof123` (usados a partir da Sprint 3).
+**Emails enviados pelo sistema:** caixa de entrada do Mailpit em http://localhost:8025.
+
+**Contas:**
+
+| Perfil | Login | Senha | Origem |
+|---|---|---|---|
+| Professor | `prof.ana`, `prof.bruno` (PUC Minas), `prof.carla` (UFMG) | `prof123` | carga inicial (V2) |
+| Aluno | `maria.silva`, `joao.pereira`, `beatriz.costa`, `lucas.almeida` (PUC Minas), `pedro.santos` (UFMG) | `aluno123` | script de demonstração |
+| Empresa | `cantina.coracao`, `livraria.paginaviva`, `papelaria.pontovirgula`, `horizonte.idiomas`, `academia.movimento` | `empresa123` | script de demonstração |
+
+A tela **Entrar** tem atalhos que preenchem uma conta de cada perfil.
+
+**Roteiro de demonstração (≈5 min):**
+1. Entre como `prof.ana` → **Reconhecer** um aluno: escolha a quantidade, um motivo e envie. O saldo cai no cabeçalho.
+2. Abra http://localhost:8025: o aluno recebeu o email com o motivo.
+3. Entre como `maria.silva` → o reconhecimento aparece no painel → **Resgatar** uma vantagem → confirme. O código do cupom aparece na tela e chega por email.
+4. Entre como a empresa da vantagem → **Conferir código** com o código do cupom: aparece "Código válido", com vantagem e aluno.
+5. Mostre o **Extrato** do professor e do aluno e, na empresa, *Nova vantagem* com a prévia de como o aluno verá.
+6. CRUD: **Sou aluno** (cadastro), **Meu cadastro** (consulta, edição e exclusão da própria conta).

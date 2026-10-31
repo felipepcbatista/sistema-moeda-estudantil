@@ -1,5 +1,7 @@
 package br.pucminas.moedaestudantil.model;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -27,6 +29,11 @@ public abstract class Usuario {
 
     @Column(name = "senha_hash", nullable = false, length = 100)
     protected String senhaHash;
+
+    /** Confere a senha informada com o hash gravado; o algoritmo (BCrypt) vem de fora da entidade. */
+    public boolean autenticar(String senha, PasswordEncoder encoder) {
+        return senha != null && encoder.matches(senha, senhaHash);
+    }
 
     public Long getId() { return id; }
 

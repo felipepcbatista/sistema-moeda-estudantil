@@ -10,7 +10,7 @@ package "model" {
     # id: Long
     # login: String
     # senhaHash: String
-    + autenticar(senha: String): boolean
+    + autenticar(senha: String, encoder: PasswordEncoder): boolean
   }
 
   class Aluno {
@@ -107,7 +107,12 @@ package "model" {
 package "service" {
 
   class AutenticacaoService {
-    + login(login: String, senha: String): Usuario
+    + login(login: String, senha: String): SessaoResponse
+  }
+
+  class ProfessorService {
+    + buscarPorId(id: Long): Professor
+    + listarAlunos(professorId: Long): List<Aluno>
   }
 
   class AlunoService {
@@ -131,19 +136,38 @@ package "service" {
   }
 
   class VantagemService {
-    + cadastrar(empresaId: Long, vantagem: Vantagem, foto: byte[]): Vantagem
-    + atualizar(id: Long, dados: Vantagem): Vantagem
-    + desativar(id: Long): void
+    + cadastrar(empresaId: Long, dados: VantagemRequest, foto: MultipartFile): Vantagem
+    + atualizar(id: Long, dados: VantagemRequest, foto: MultipartFile): Vantagem
+    + desativar(id: Long): Vantagem
+    + reativar(id: Long): Vantagem
     + listarAtivas(): List<Vantagem>
+    + listarDaEmpresa(empresaId: Long): List<Vantagem>
+  }
+
+  class FotoStorage {
+    + salvar(foto: MultipartFile): String
+    + carregar(nome: String): Resource
   }
 
   class TransacaoService {
     + enviarMoedas(professorId: Long, alunoId: Long, valor: int, motivo: String): EnvioMoedas
     + resgatarVantagem(alunoId: Long, vantagemId: Long): ResgateVantagem
-    + creditarSemestre(semestre: String): void
+    + creditarSemestre(semestre: String): int
     + consultarExtrato(contaId: Long): List<Transacao>
+    + extratoProfessor(professorId: Long): ExtratoResponse
+    + extratoAluno(alunoId: Long): ExtratoResponse
+    + resgatesDaEmpresa(empresaId: Long): List<ResgateEmpresaResponse>
+    - travar(contas: Conta...): void
     - gerarCodigo(): String
   }
+
+  class CreditoSemestralJob {
+    + executar(): void
+    + {static} semestreDe(data: LocalDate): String
+  }
+
+  VantagemService --> FotoStorage
+  CreditoSemestralJob --> TransacaoService
 
   interface NotificacaoService {
     + notificarRecebimento(envio: EnvioMoedas): void
@@ -162,6 +186,7 @@ AlunoService ..> Aluno
 EmpresaParceiraService ..> EmpresaParceira
 VantagemService ..> Vantagem
 AutenticacaoService ..> Usuario
+ProfessorService ..> Professor
 
 
 @enduml

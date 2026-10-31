@@ -6,10 +6,12 @@ import java.util.Map;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -22,6 +24,21 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RegraNegocioException.class)
     public ResponseEntity<ErroResponse> regraNegocio(RegraNegocioException e) {
         return erro(HttpStatus.UNPROCESSABLE_ENTITY, e.getMessage());
+    }
+
+    @ExceptionHandler(CredenciaisInvalidasException.class)
+    public ResponseEntity<ErroResponse> credenciais(CredenciaisInvalidasException e) {
+        return erro(HttpStatus.UNAUTHORIZED, e.getMessage());
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErroResponse> corpoIlegivel(HttpMessageNotReadableException e) {
+        return erro(HttpStatus.BAD_REQUEST, "Corpo da requisição inválido ou mal formatado");
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErroResponse> fotoGrande(MaxUploadSizeExceededException e) {
+        return erro(HttpStatus.PAYLOAD_TOO_LARGE, "A foto deve ter no máximo 5 MB");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

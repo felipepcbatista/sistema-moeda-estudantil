@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import Campo from '../components/Campo.jsx'
-import { alunosApi, instituicoesApi, lerErro } from '../api/api.js'
+import Modal from '../components/Modal.jsx'
+import { alunosApi, authApi, instituicoesApi, lerErro } from '../api/api.js'
+import { PAINEL, useSessao } from '../sessao.jsx'
 
 const VAZIO = {
   nome: '',
@@ -15,15 +17,21 @@ const VAZIO = {
   endereco: { logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '', cep: '' },
 }
 
-export default function AlunoForm() {
-  const { id } = useParams()
+/**
+ * CRUD do aluno (US02, US03). Sem id: cadastro publico, que ja entra no sistema ao final.
+ * Com id ("Meu cadastro"): consulta, edicao e exclusao da propria conta.
+ */
+export default function AlunoForm({ id }) {
   const editando = Boolean(id)
   const navegar = useNavigate()
+  const { entrar, sair } = useSessao()
 
   const [dados, setDados] = useState(VAZIO)
   const [instituicoes, setInstituicoes] = useState([])
   const [erro, setErro] = useState({ mensagem: null, campos: {} })
+  const [aviso, setAviso] = useState(null)
   const [salvando, setSalvando] = useState(false)
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState(false)
 
   useEffect(() => {
     instituicoesApi.listar().then(setInstituicoes).catch((e) => setErro(lerErro(e)))
@@ -50,6 +58,7 @@ export default function AlunoForm() {
     e.preventDefault()
     setSalvando(true)
     setErro({ mensagem: null, campos: {} })
+    setAviso(null)
     const corpo = {
       nome: dados.nome,
       email: dados.email,
@@ -62,9 +71,16 @@ export default function AlunoForm() {
       senha: dados.senha === '' ? null : dados.senha,
     }
     try {
-      if (editando) await alunosApi.atualizar(id, corpo)
-      else await alunosApi.cadastrar(corpo)
-      navegar('/alunos')
+      if (editando) {
+        const a = await alunosApi.atualizar(id, corpo)
+        entrar({ id: a.id, perfil: 'ALUNO', nome: a.nome })
+        setDados({ ...dados, senha: '' })
+        setAviso('Cadastro atualizado.')
+      } else {
+        await alunosApi.cadastrar(corpo)
+        entrar(await authApi.login(corpo.login, corpo.senha))
+        navegar(PAINEL.ALUNO)
+      }
     } catch (err) {
       setErro(lerErro(err))
     } finally {
@@ -72,20 +88,39 @@ export default function AlunoForm() {
     }
   }
 
+  const excluir = async () => {
+    try {
+      await alunosApi.excluir(id)
+      sair()
+      navegar('/')
+    } catch (err) {
+      setConfirmandoExclusao(false)
+      setErro(lerErro(err))
+    }
+  }
+
   const c = erro.campos
   return (
-    <section>
-      <h1>{editando ? 'Editar aluno' : 'Cadastro de aluno'}</h1>
+    <section className="pagina-form">
+      <header className="cabecalho-pagina">
+        <h1>{editando ? 'Meu cadastro' : 'Cadastro de aluno'}</h1>
+        <p className="suave">
+          {editando
+            ? 'Mantenha seus dados atualizados.'
+            : 'Cadastre-se para receber moedas dos seus professores e trocá-las por vantagens.'}
+        </p>
+      </header>
       {erro.mensagem && <p className="alerta">{erro.mensagem}</p>}
+      {aviso && <p className="sucesso">{aviso}</p>}
 
       <form onSubmit={salvar} noValidate>
         <fieldset>
           <legend>Dados pessoais</legend>
           <div className="grade">
-            <Campo rotulo="Nome" nome="nome" value={dados.nome} onChange={alterar} erro={c.nome} largura="l2" />
+            <Campo rotulo="Nome completo" nome="nome" value={dados.nome} onChange={alterar} erro={c.nome} largura="l2" />
             <Campo rotulo="Email" nome="email" type="email" value={dados.email} onChange={alterar} erro={c.email} largura="l2" />
-            <Campo rotulo="CPF" nome="cpf" value={dados.cpf} onChange={alterar} erro={c.cpf} placeholder="000.000.000-00" />
-            <Campo rotulo="RG" nome="rg" value={dados.rg} onChange={alterar} erro={c.rg} />
+            <Campo rotulo="CPF" nome="cpf" value={dados.cpf} onChange={alterar} erro={c.cpf} placeholder="000.000.000-00" largura="l2" />
+            <Campo rotulo="RG" nome="rg" value={dados.rg} onChange={alterar} erro={c.rg} largura="l2" />
           </div>
         </fieldset>
 
@@ -107,13 +142,13 @@ export default function AlunoForm() {
         <fieldset>
           <legend>Endereço</legend>
           <div className="grade">
+            <Campo rotulo="CEP" nome="cep" value={dados.endereco.cep} onChange={alterarEndereco} erro={c['endereco.cep']} placeholder="00000-000" />
             <Campo rotulo="Logradouro" nome="logradouro" value={dados.endereco.logradouro} onChange={alterarEndereco} erro={c['endereco.logradouro']} largura="l3" />
             <Campo rotulo="Número" nome="numero" value={dados.endereco.numero} onChange={alterarEndereco} erro={c['endereco.numero']} />
             <Campo rotulo="Complemento" nome="complemento" value={dados.endereco.complemento} onChange={alterarEndereco} erro={c['endereco.complemento']} />
-            <Campo rotulo="Bairro" nome="bairro" value={dados.endereco.bairro} onChange={alterarEndereco} erro={c['endereco.bairro']} />
-            <Campo rotulo="Cidade" nome="cidade" value={dados.endereco.cidade} onChange={alterarEndereco} erro={c['endereco.cidade']} />
+            <Campo rotulo="Bairro" nome="bairro" value={dados.endereco.bairro} onChange={alterarEndereco} erro={c['endereco.bairro']} largura="l2" />
+            <Campo rotulo="Cidade" nome="cidade" value={dados.endereco.cidade} onChange={alterarEndereco} erro={c['endereco.cidade']} largura="l3" />
             <Campo rotulo="UF" nome="uf" maxLength={2} value={dados.endereco.uf} onChange={alterarEndereco} erro={c['endereco.uf']} />
-            <Campo rotulo="CEP" nome="cep" value={dados.endereco.cep} onChange={alterarEndereco} erro={c['endereco.cep']} placeholder="00000-000" />
           </div>
           {c.endereco && <small className="erro-campo">{c.endereco}</small>}
         </fieldset>
@@ -121,9 +156,9 @@ export default function AlunoForm() {
         <fieldset>
           <legend>Acesso</legend>
           <div className="grade">
-            <Campo rotulo="Login" nome="login" value={dados.login} onChange={alterar} erro={c.login} largura="l2" />
+            <Campo rotulo="Login" nome="login" autoComplete="username" value={dados.login} onChange={alterar} erro={c.login} largura="l2" />
             <Campo
-              rotulo={editando ? 'Nova senha (em branco = manter)' : 'Senha'}
+              rotulo={editando ? 'Nova senha (deixe em branco para manter)' : 'Senha'}
               nome="senha"
               type="password"
               autoComplete="new-password"
@@ -136,12 +171,28 @@ export default function AlunoForm() {
         </fieldset>
 
         <div className="rodape-form">
-          <Link to="/alunos" className="botao secundario">Cancelar</Link>
-          <button type="submit" className="botao" disabled={salvando}>
-            {salvando ? 'Salvando…' : 'Salvar'}
+          {editando ? (
+            <button type="button" className="botao perigo-fantasma" onClick={() => setConfirmandoExclusao(true)}>
+              Excluir minha conta
+            </button>
+          ) : (
+            <span className="suave">Já tem conta? <Link to="/entrar">Entrar</Link></span>
+          )}
+          <button type="submit" className="botao primario" disabled={salvando}>
+            {salvando ? 'Salvando…' : editando ? 'Salvar alterações' : 'Criar conta'}
           </button>
         </div>
       </form>
+
+      {confirmandoExclusao && (
+        <Modal titulo="Excluir conta" aoFechar={() => setConfirmandoExclusao(false)}>
+          <p>Sua conta e seus dados serão removidos. Contas que já receberam ou trocaram moedas não podem ser excluídas, para preservar o histórico.</p>
+          <div className="modal-acoes">
+            <button type="button" className="botao claro" onClick={() => setConfirmandoExclusao(false)}>Cancelar</button>
+            <button type="button" className="botao perigo" onClick={excluir}>Excluir conta</button>
+          </div>
+        </Modal>
+      )}
     </section>
   )
 }

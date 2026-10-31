@@ -12,5 +12,13 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  # Servidor SMTP de desenvolvimento: recebe os emails do sistema e mostra numa caixa de entrada web
+  mailpit:
+    image: axllent/mailpit:v1.21.8
+    container_name: moeda-estudantil-mail
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # caixa de entrada: http://localhost:8025
+
 volumes:
   pgdata:
