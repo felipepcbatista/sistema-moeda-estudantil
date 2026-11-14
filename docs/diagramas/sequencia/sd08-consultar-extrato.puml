@@ -1,0 +1,78 @@
+@startuml sd08-consultar-extrato
+!include _estilo.iuml
+title sd Consultar Extrato (UC08 / US08 / RN07)
+
+actor "usuário:\nAluno | Professor" as U
+boundary ":Extrato" as V
+control ":ProfessorController" as CP
+control ":AlunoController" as CA
+participant ":TransacaoService" as S
+participant ":ProfessorRepository" as PR
+participant ":AlunoRepository" as AR
+participant ":TransacaoRepository" as TR
+collections "transacoes[i]:\nTransacao" as T
+
+U -> V : abrir "Extrato"
+activate V
+alt sessao.perfil == PROFESSOR
+  ref over V, CP : sd Autorizar Requisição (ROLE_PROFESSOR e ehOProprio(id))
+  V -> CP : GET /api/professores/{id}/extrato
+  activate CP
+  CP -> S : extratoProfessor(id)
+  activate S
+  S -> PR : findById(id)
+  activate PR
+  PR --> S : professor | 404
+  deactivate PR
+  S -> S : montarExtrato(professor.conta)
+else sessao.perfil == ALUNO
+  ref over V, CA : sd Autorizar Requisição (ROLE_ALUNO e ehOProprio(id))
+  V -> CA : GET /api/alunos/{id}/extrato
+  activate CA
+  CA -> S : extratoAluno(id)
+  S -> AR : findById(id)
+  activate AR
+  AR --> S : aluno | 404
+  deactivate AR
+  S -> S : montarExtrato(aluno.conta)
+end
+
+S -> TR : findExtrato(conta.id)
+activate TR
+note right of TR : conta como origem OU destino,\nordem: dataHora desc, id desc
+TR --> S : List<Transacao>
+deactivate TR
+
+loop para cada transação t
+  S -> T : getContaOrigem(), getValor()
+  S -> S : saida = (t.contaOrigem == conta); valor = saida ? -valor : valor
+  alt t é EnvioMoedas
+    S -> S : nomeDoDono(conta do outro lado, cache)
+    opt nome ainda não está no cache
+      S -> AR : findByContaId(contaId)
+      activate AR
+      AR --> S : Optional<Aluno>
+      deactivate AR
+      opt não é aluno
+        S -> PR : findByContaId(contaId)
+        activate PR
+        PR --> S : Optional<Professor>
+        deactivate PR
+      end
+    end
+    S -> S : linha "ENVIO": "Enviado para X" | "Recebido de X", motivo
+  else t é ResgateVantagem
+    S -> S : linha "RESGATE": vantagem (empresa), código
+  else t é CreditoSemestral
+    S -> S : linha "CREDITO": "Crédito semestral 2026-2"
+  end
+end
+S --> CP : ExtratoResponse(saldo, linhas)
+deactivate S
+CP --> V : 200 ExtratoResponse
+deactivate CP
+note over CA, S : no ramo do aluno o retorno é o mesmo,\nvia AlunoController
+deactivate CA
+V --> U : saldo atual + transações (professor: créditos e envios;\naluno: recebimentos e resgates)
+deactivate V
+@enduml

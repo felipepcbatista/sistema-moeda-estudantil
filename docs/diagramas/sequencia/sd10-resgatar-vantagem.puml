@@ -1,0 +1,94 @@
+@startuml sd10-resgatar-vantagem
+!include _estilo.iuml
+title sd Resgatar Vantagem (UC10 / US10 / RN09 / RN10)
+
+actor ":Aluno" as U
+boundary ":PainelAluno" as V
+control ":AlunoController" as C
+participant ":TransacaoService" as S
+participant ":AlunoRepository" as AR
+participant ":VantagemRepository" as VR
+participant ":EntityManager" as EM
+entity "conta:Conta" as K
+participant ":TransacaoRepository" as TR
+participant ":EmailNotificacao\nService" as N
+participant "Servidor SMTP\n(JavaMailSender)" as SMTP
+
+ref over U, C : sd Consultar Vantagens (UC10 <<include>> UC09)
+
+U -> V : resgatar(vantagem)
+activate V
+V -> V : abrir ModalResgate (custo e saldo após o resgate)
+U -> V : confirmar resgate
+ref over V, C : sd Autorizar Requisição (ROLE_ALUNO e acesso.ehOProprio(id))
+V -> C : POST /api/alunos/{id}/resgates {vantagemId}
+activate C
+C -> S : resgatarVantagem(id, vantagemId)
+activate S
+S -> AR : findById(alunoId)
+activate AR
+AR --> S : aluno | 404
+deactivate AR
+S -> VR : findById(vantagemId)
+activate VR
+VR --> S : vantagem | 404
+deactivate VR
+break vantagem desativada
+  S --> C : RegraNegocioException
+  C --> V : 422 "Esta vantagem não está mais disponível"
+end
+
+critical @Transactional — débito e registro do resgate juntos ou nada
+  S -> S : travar(conta)
+  activate S
+  S -> EM : flush(); refresh(conta, PESSIMISTIC_WRITE)
+  deactivate S
+  S -> K : possuiSaldo(vantagem.custoMoedas)
+  activate K
+  K --> S : boolean
+  deactivate K
+  break saldo menor que o custo (rollback)
+    S --> C : RegraNegocioException
+    C --> V : 422 "Saldo insuficiente: a vantagem custa X moedas e você tem Y"
+  end
+  S -> K : debitar(custo)
+  create entity "resgate:\nResgateVantagem" as R
+  S -> R : <<create>> ResgateVantagem()
+  S -> R : setValor(custo), setContaOrigem(conta), setVantagem(vantagem)
+  S -> S : gerarCodigo()
+  activate S
+  loop enquanto o código já existir (do ... while)
+    S -> S : 8 caracteres de "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"\n(SecureRandom; sem 0/O e 1/I)
+    S -> TR : existsCodigoResgate(codigo)
+    activate TR
+    TR --> S : boolean
+    deactivate TR
+  end
+  deactivate S
+  S -> R : setCodigo(codigo)
+  S -> TR : save(resgate)
+  activate TR
+  TR --> S
+  deactivate TR
+  S -> N : enviarCupomAluno(resgate)
+  activate N
+  N -> AR : findByContaId(conta.id)
+  N -> N : enviarAposCommit(aluno.email, "Seu cupom: ... (código X)", texto)
+  deactivate N
+  S -> N : notificarParceiro(resgate)
+  activate N
+  N -> N : enviarAposCommit(empresa.email, "Novo resgate: ... (código X)", texto)
+  deactivate N
+end
+S --> C : resgate
+deactivate S
+== commit da transação ==
+N ->> SMTP : send(cupom do aluno) — afterCommit()
+N ->> SMTP : send(aviso de conferência à empresa) — afterCommit()
+note right of N : os dois emails levam o mesmo código (RN10);\nfalha de SMTP só vai para o log
+C --> V : 201 ResgateResponse {codigo, ...}
+deactivate C
+V -> V : atualizarSaldo()
+V --> U : exibir o código do cupom
+deactivate V
+@enduml

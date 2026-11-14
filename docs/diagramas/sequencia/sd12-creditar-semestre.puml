@@ -1,0 +1,48 @@
+@startuml sd12-creditar-semestre
+!include _estilo.iuml
+title sd Creditar Semestre (processo de sistema — RN04)
+
+participant ":Agendador Spring\n(@Scheduled /\nApplicationReadyEvent)" as AG
+control ":CreditoSemestralJob" as J
+participant ":TransacaoService" as S
+participant ":ProfessorRepository" as PR
+participant ":TransacaoRepository" as TR
+participant ":EntityManager" as EM
+collections "professores[i].conta:\nConta" as K
+
+AG ->> J : executar()
+activate J
+note right of AG : cron "0 0 0 1 2,8 *" (1º/fev e 1º/ago)\ne também na subida da aplicação
+J -> J : semestreDe(LocalDate.now())
+note right of J : fev–jul → "AAAA-1";\nago–dez → "AAAA-2";\njan → "(AAAA-1)-2"
+J -> S : creditarSemestre(semestre)
+activate S
+S -> PR : findAll()
+activate PR
+PR --> S : List<Professor>
+deactivate PR
+loop para cada professor
+  S -> TR : existsCreditoSemestre(conta.id, semestre)
+  activate TR
+  TR --> S : boolean
+  deactivate TR
+  opt ainda não creditado neste semestre (idempotência)
+    S -> EM : flush(); refresh(conta, PESSIMISTIC_WRITE)
+    S -> K : creditar(1000)
+    note right of K : acumulável: soma ao saldo corrente
+    create entity "credito:\nCreditoSemestral" as CS
+    S -> CS : <<create>> CreditoSemestral()
+    S -> CS : setValor(1000), setSemestre(semestre), setContaDestino(conta)
+    S -> TR : save(credito)
+    activate TR
+    TR --> S
+    deactivate TR
+    S -> S : creditados++
+  end
+end
+S --> J : creditados
+deactivate S
+J -> J : log.info("Crédito semestral {}: {} professor(es) creditado(s)")
+deactivate J
+note over AG, S : Não é caso de uso: é disparado por data, sem ator humano (README, RN04).\nEntra no modelo de interação porque é a origem de todas as moedas que circulam.
+@enduml

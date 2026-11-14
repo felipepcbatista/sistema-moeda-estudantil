@@ -1,0 +1,108 @@
+@startuml sd06-gerenciar-vantagens
+!include _estilo.iuml
+title sd Gerenciar Vantagens (UC06 / US06 / RN08)
+
+actor ":Empresa Parceira" as U
+boundary ":PainelEmpresa /\n:VantagemForm" as V
+control ":VantagemController" as C
+participant ":VantagemService" as S
+participant ":EmpresaParceira\nRepository" as ER
+participant ":FotoStorage" as F
+participant ":VantagemRepository" as VR
+
+U -> V : abrir painel
+activate V
+ref over V, C : sd Autorizar Requisição (ROLE_EMPRESA e acesso.ehOProprio(empresaId))
+V -> C : GET /api/empresas/{empresaId}/vantagens
+activate C
+C -> S : listarDaEmpresa(empresaId)
+activate S
+S -> VR : findByEmpresaIdOrderByNomeAsc(empresaId)
+activate VR
+VR --> S : List<Vantagem> (ativas e desativadas)
+deactivate VR
+S --> C : vantagens
+deactivate S
+C --> V : 200 List<VantagemResponse>
+deactivate C
+
+alt cadastrar
+  U -> V : "Nova vantagem": nome, descrição, custo, foto
+  V -> C : POST /api/empresas/{empresaId}/vantagens\nmultipart {dados: VantagemRequest, foto}
+  activate C
+  break Bean Validation falha (custo <= 0, campo vazio)
+    C --> V : 400 erro por campo
+  end
+  C -> S : cadastrar(empresaId, dados, foto)
+  activate S
+  S -> ER : findById(empresaId)
+  activate ER
+  ER --> S : empresa
+  deactivate ER
+  create entity "vantagem:Vantagem" as E
+  S -> E : <<create>> Vantagem()
+  S -> E : aplicar: setNome, setDescricao, setCustoMoedas
+  S -> F : salvar(foto)
+  activate F
+  break foto ausente ou tipo diferente de JPG/PNG/WEBP/GIF
+    F --> C : RegraNegocioException
+    C --> V : 422 "A foto do produto é obrigatória" | "A foto deve ser JPG, PNG, WEBP ou GIF"
+  end
+  F -> F : nome = UUID + extensão; Files.copy(...)
+  F --> S : "/api/fotos/{nome}"
+  deactivate F
+  S -> E : setFotoUrl(url); setEmpresa(empresa)
+  S -> VR : save(vantagem)
+  activate VR
+  VR --> S : vantagem
+  deactivate VR
+  S --> C : vantagem
+  deactivate S
+  C --> V : 201 VantagemResponse
+  deactivate C
+
+else editar
+  ref over V, C : sd Autorizar Requisição (ROLE_EMPRESA e acesso.ehDonoDaVantagem(id))
+  U -> V : alterar dados [+ nova foto]
+  V -> C : PUT /api/vantagens/{id} multipart {dados, foto?}
+  activate C
+  C -> S : atualizar(id, dados, foto)
+  activate S
+  S -> VR : findById(id)
+  activate VR
+  VR --> S : vantagem | 404
+  deactivate VR
+  S -> E : setNome, setDescricao, setCustoMoedas
+  opt nova foto enviada
+    S -> F : salvar(foto)
+    activate F
+    F --> S : url
+    deactivate F
+    S -> E : setFotoUrl(url)
+  end
+  S --> C : vantagem
+  deactivate S
+  C --> V : 200 VantagemResponse
+  deactivate C
+
+else desativar | reativar
+  ref over V, C : sd Autorizar Requisição (ROLE_EMPRESA e acesso.ehDonoDaVantagem(id))
+  U -> V : alternar vitrine
+  V -> C : POST /api/vantagens/{id}/desativar | /reativar
+  activate C
+  C -> S : desativar(id) | reativar(id)
+  activate S
+  S -> VR : findById(id)
+  activate VR
+  VR --> S : vantagem
+  deactivate VR
+  S -> E : setAtiva(false | true)
+  note right of E : desativar não exclui: resgates\nanteriores continuam apontando\npara a vantagem (US06)
+  S --> C : vantagem
+  deactivate S
+  C --> V : 200 VantagemResponse
+  deactivate C
+  V -> V : carregar() de novo
+end
+deactivate V
+@enduml

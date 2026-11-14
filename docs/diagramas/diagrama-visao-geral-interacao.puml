@@ -1,0 +1,99 @@
+@startuml diagrama-visao-geral-interacao
+' Diagrama de Visao Geral da Interacao (Lab04S01).
+' Cada no e um quadro "ref" que aponta para um diagrama de sequencia de docs/diagramas/sequencia/.
+' O fluxo de controle (decisoes, repeticoes, paralelismo) mostra como as interacoes se encadeiam.
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam ActivityBackgroundColor #FFFFE0
+skinparam ActivityBorderColor #333333
+skinparam ActivityDiamondBackgroundColor #FFF4B3
+skinparam ActivityDiamondBorderColor #333333
+skinparam ArrowColor #333333
+skinparam NoteBackgroundColor #F6F6F6
+
+title sd Visão Geral da Interação — Sistema de Moeda Estudantil
+
+start
+
+fork
+  :**ref**
+  sd12 Creditar Semestre;
+  note right
+    Processo de sistema, em paralelo às sessões:
+    1º/fev, 1º/ago e na subida da aplicação.
+    Origem das moedas que os professores distribuem (RN04).
+  end note
+  end
+fork again
+  if (já tem conta?) then (não)
+    if (quem se cadastra?) then (aluno)
+      :**ref**
+      sd02 Cadastrar-se como Aluno;
+    else (empresa)
+      :**ref**
+      sd04 Cadastrar-se como Empresa Parceira;
+    endif
+    note right: o cadastro termina com login automático
+  else (sim)
+    repeat
+      :**ref**
+      sd01 Autenticar-se;
+    repeat while (credenciais válidas?) is (não) not (sim)
+  endif
+
+  note right
+    Toda chamada a rota protegida abaixo passa por
+    **ref** sd00 Autorizar Requisição (JWT + regra de posse).
+    Token expirado (401) devolve a sessão para sd01.
+  end note
+
+  switch (perfil da sessão?)
+  case (PROFESSOR)
+    repeat
+      if (ação?) then (reconhecer aluno)
+        :**ref**
+        sd07 Enviar Moedas;
+      else (ver extrato)
+        :**ref**
+        sd08 Consultar Extrato;
+      endif
+    repeat while (continuar na sessão?) is (sim) not (sair)
+
+  case (ALUNO)
+    repeat
+      switch (ação?)
+      case (vitrine)
+        :**ref**
+        sd09 Consultar Vantagens;
+        if (resgatar uma vantagem?) then (sim)
+          :**ref**
+          sd10 Resgatar Vantagem;
+        else (não)
+        endif
+      case (extrato)
+        :**ref**
+        sd08 Consultar Extrato;
+      case (meu cadastro)
+        :**ref**
+        sd03 Manter Cadastro de Aluno;
+      endswitch
+    repeat while (continuar na sessão?) is (sim) not (sair ou conta excluída)
+
+  case (EMPRESA)
+    repeat
+      switch (ação?)
+      case (conferir código)
+        :**ref**
+        sd11 Conferir Resgate;
+      case (vantagens)
+        :**ref**
+        sd06 Gerenciar Vantagens;
+      case (meu cadastro)
+        :**ref**
+        sd05 Manter Cadastro de Empresa;
+      endswitch
+    repeat while (continuar na sessão?) is (sim) not (sair ou conta excluída)
+  endswitch
+  stop
+end fork
+@enduml

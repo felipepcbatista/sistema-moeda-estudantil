@@ -1,0 +1,60 @@
+@startuml sd04-cadastrar-empresa
+!include _estilo.iuml
+title sd Cadastrar-se como Empresa Parceira (UC04 / US04)
+
+actor ":Empresa Parceira" as U
+boundary ":EmpresaForm" as V
+control ":EmpresaParceira\nController" as C
+participant ":EmpresaParceira\nService" as S
+participant ":EmpresaParceira\nRepository" as ER
+participant ":UsuarioRepository" as UR
+participant ":PasswordEncoder" as B
+
+U -> V : abrir "Sou empresa"
+activate V
+U -> V : preencher(nomeFantasia, cnpj, email, login, senha)
+V -> C : POST /api/empresas {EmpresaParceiraRequest}
+activate C
+break Bean Validation (@Valid) falha
+  C --> V : 400 "Dados inválidos" + erro por campo
+end
+C -> S : cadastrar(dados)
+activate S
+break senha em branco
+  S --> C : RegraNegocioException → 422
+end
+S -> S : validarUnicidade(dados, null)
+S -> ER : existsByCnpj(cnpj) / existsByEmail(email)
+activate ER
+ER --> S : boolean
+deactivate ER
+S -> UR : existsByLogin(login)
+activate UR
+UR --> S : boolean
+deactivate UR
+break CNPJ, email ou login já em uso
+  S --> C : RegraNegocioException
+  C --> V : 422 "CNPJ já cadastrado" | "Email já cadastrado" | "Login já está em uso"
+end
+create entity "empresa:\nEmpresaParceira" as E
+S -> E : <<create>> EmpresaParceira()
+S -> S : aplicar(empresa, dados)
+S -> E : setNomeFantasia, setCnpj(só dígitos), setEmail(minúsculo), setLogin
+S -> B : encode(senha)
+activate B
+B --> S : hash
+deactivate B
+S -> E : setSenhaHash(hash)
+S -> ER : save(empresa)
+activate ER
+ER --> S : empresa
+deactivate ER
+S --> C : empresa
+deactivate S
+C --> V : 201 EmpresaParceiraResponse
+deactivate C
+ref over V, S : sd Autenticar-se (login automático com o login e a senha do cadastro)
+V --> U : abrir o painel da empresa
+deactivate V
+note over U, S : A empresa não tem Conta: ela não guarda saldo, só oferece vantagens.
+@enduml

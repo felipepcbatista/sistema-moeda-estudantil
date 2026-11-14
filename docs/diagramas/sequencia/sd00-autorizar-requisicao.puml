@@ -1,0 +1,50 @@
+@startuml sd00-autorizar-requisicao
+!include _estilo.iuml
+title sd Autorizar Requisição\n<size:11>(fragmento reutilizado com **ref** pelos demais diagramas em toda rota protegida)</size>
+
+boundary ":Tela (React)" as V
+participant ":Cliente HTTP\n(Axios)" as H
+control ":SecurityFilterChain" as F
+participant ":JwtDecoder" as D
+participant ":Proxy\n@PreAuthorize" as P
+participant "acesso:Acesso" as A
+control ":Controller" as C
+
+V -> H : chamar rota da API
+activate H
+H -> H : interceptor: Authorization = "Bearer " + token
+H -> F : requisição HTTP
+activate F
+alt rota pública (login, cadastros, vitrine, fotos, instituições)
+  F -> C : encaminhar requisição
+else rota protegida
+  F -> D : decode(token)
+  activate D
+  D --> F : jwt {sub = id, perfil, nome} | JwtException
+  deactivate D
+  break token ausente, adulterado ou expirado
+    F --> H : 401 Não autenticado
+    H -> V : aoExpirar()
+    note right of V : encerra a sessão e\nvolta para /entrar
+  end
+  F -> F : perfil → ROLE_ALUNO | ROLE_PROFESSOR | ROLE_EMPRESA
+  F -> P : encaminhar requisição
+  activate P
+  P -> P : hasRole(perfil exigido pela rota)
+  P -> A : ehOProprio(id) | ehDonoDaVantagem(vantagemId)
+  activate A
+  A -> A : idLogado() = SecurityContext.authentication.name
+  A --> P : boolean
+  deactivate A
+  break papel errado ou recurso de outro usuário
+    P --> H : 403 Sem permissão
+  end
+  P -> C : invocar método do controller
+  deactivate P
+end
+C --> F : resposta
+F --> H : resposta HTTP
+deactivate F
+H --> V : dados
+deactivate H
+@enduml

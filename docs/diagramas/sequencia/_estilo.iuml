@@ -1,0 +1,20 @@
+' Estilo comum a todos os diagramas de sequencia (Lab04S01).
+' Notacao UML estrita: seta cheia = sincrona, seta aberta (->>) = assincrona, tracejada = retorno.
+skinparam style strictuml
+hide footbox
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 230
+skinparam ParticipantPadding 6
+skinparam BoxPadding 6
+skinparam sequence {
+  ParticipantBackgroundColor #FFFFE0
+  ParticipantBorderColor #333333
+  ActorBackgroundColor #FFFFE0
+  LifeLineBorderColor #666666
+  GroupBackgroundColor #EEF3FA
+  ReferenceBackgroundColor #F6F6F6
+}
+autonumber

@@ -1,0 +1,51 @@
+@startuml sd09-consultar-vantagens
+!include _estilo.iuml
+title sd Consultar Vantagens (UC09 / US09)
+
+actor ":Aluno" as U
+boundary ":PainelAluno" as V
+control ":VantagemController" as C
+participant ":VantagemService" as S
+participant ":VantagemRepository" as VR
+control ":FotoController" as FC
+participant ":FotoStorage" as F
+
+U -> V : abrir painel
+activate V
+par Promise.all — carregadas em paralelo
+  ref over V, C : sd Consultar Extrato (saldo e recebimentos do aluno)
+else
+  V -> C : GET /api/vantagens
+  activate C
+  note right of V : rota pública: a vitrine\nnão exige token
+  C -> S : listarAtivas()
+  activate S
+  S -> VR : findByAtivaTrueOrderByNomeAsc()
+  activate VR
+  VR --> S : List<Vantagem>
+  deactivate VR
+  S --> C : vantagens ativas
+  deactivate S
+  C --> V : 200 List<VantagemResponse>\n(nome, descrição, fotoUrl, custo, empresa)
+  deactivate C
+end
+
+loop para cada vantagem da vitrine
+  V -> FC : GET /api/fotos/{arquivo}
+  activate FC
+  FC -> F : carregar(arquivo)
+  activate F
+  F -> F : resolve + normalize; dentro do diretório?
+  F --> FC : Resource | null
+  deactivate F
+  alt arquivo existe e não tenta sair do diretório ("../")
+    FC --> V : 200 imagem
+  else
+    FC --> V : 404
+  end
+  deactivate FC
+  V -> V : falta = custoMoedas - saldo
+end
+V --> U : vitrine com foto, empresa, custo\ne quanto falta para cada vantagem
+deactivate V
+@enduml

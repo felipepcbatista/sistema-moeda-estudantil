@@ -1,0 +1,74 @@
+@startuml sd02-cadastrar-aluno
+!include _estilo.iuml
+title sd Cadastrar-se como Aluno (UC02 / US02)
+
+actor ":Aluno" as U
+boundary ":AlunoForm" as V
+control ":InstituicaoEnsino\nController" as CI
+control ":AlunoController" as C
+participant ":AlunoService" as S
+participant ":AlunoRepository" as AR
+participant ":UsuarioRepository" as UR
+participant ":InstituicaoEnsino\nRepository" as IR
+participant ":PasswordEncoder" as B
+
+U -> V : abrir "Sou aluno"
+activate V
+V -> CI : GET /api/instituicoes
+activate CI
+CI --> V : List<InstituicaoResponse>
+deactivate CI
+note right of CI : RN02: instituições pré-cadastradas\n(InstituicaoEnsinoService.listar())
+U -> V : preencher(nome, email, cpf, rg, endereço,\ninstituição, curso, login, senha)
+V -> C : POST /api/alunos {AlunoRequest}
+activate C
+break Bean Validation (@Valid) falha
+  C --> V : 400 "Dados inválidos" + erro por campo
+end
+C -> S : cadastrar(dados)
+activate S
+break senha em branco
+  S --> C : RegraNegocioException → 422
+end
+S -> S : validarUnicidade(dados, null)
+S -> AR : existsByCpf(cpf) / existsByEmail(email)
+activate AR
+AR --> S : boolean
+deactivate AR
+S -> UR : existsByLogin(login)
+activate UR
+UR --> S : boolean
+deactivate UR
+break CPF, email ou login já em uso
+  S --> C : RegraNegocioException
+  C --> V : 422 "CPF já cadastrado" | "Email já cadastrado" | "Login já está em uso"
+end
+create entity "aluno:Aluno" as A
+S -> A : <<create>> Aluno()
+create entity "conta:Conta" as K
+A -> K : <<create>> Conta()
+note right of K : composição: saldo inicial = 0
+S -> S : aplicar(aluno, dados)
+S -> IR : findById(instituicaoId)
+activate IR
+IR --> S : instituicao
+deactivate IR
+S -> A : setNome, setEmail, setCpf(só dígitos), setRg,\nsetCurso, setEndereco, setInstituicao, setLogin
+S -> B : encode(senha)
+activate B
+B --> S : hash
+deactivate B
+S -> A : setSenhaHash(hash)
+S -> AR : save(aluno)
+activate AR
+note right of AR : cascade grava a conta\njunto com o aluno
+AR --> S : aluno
+deactivate AR
+S --> C : aluno
+deactivate S
+C --> V : 201 AlunoResponse
+deactivate C
+ref over V, S : sd Autenticar-se (login automático com o login e a senha do cadastro)
+V --> U : abrir o painel do aluno
+deactivate V
+@enduml

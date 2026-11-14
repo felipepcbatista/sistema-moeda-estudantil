@@ -1,0 +1,111 @@
+@startuml sd03-manter-cadastro-aluno
+!include _estilo.iuml
+title sd Manter Cadastro de Aluno (UC03 / US03)
+
+actor ":Aluno" as U
+boundary ":AlunoForm\n(Meu cadastro)" as V
+control ":AlunoController" as C
+participant ":AlunoService" as S
+participant ":AlunoRepository" as AR
+participant ":TransacaoRepository" as TR
+participant ":PasswordEncoder" as B
+entity "aluno:Aluno" as A
+
+ref over V, C : sd Autorizar Requisição (ROLE_ALUNO e acesso.ehOProprio(id), em toda rota abaixo)
+
+alt consultar
+  U -> V : abrir "Meu cadastro"
+  activate V
+  V -> C : GET /api/alunos/{id}
+  activate C
+  C -> S : buscarPorId(id)
+  activate S
+  S -> AR : findById(id)
+  activate AR
+  AR --> S : Optional<Aluno>
+  deactivate AR
+  S --> C : aluno | RecursoNaoEncontradoException (404)
+  deactivate S
+  C --> V : 200 AlunoResponse
+  deactivate C
+  V --> U : exibir dados preenchidos
+  deactivate V
+
+else editar
+  U -> V : alterar dados [+ senhaAtual e nova senha]
+  activate V
+  V -> C : PUT /api/alunos/{id} {AlunoRequest}
+  activate C
+  C -> S : atualizar(id, dados)
+  activate S
+  S -> AR : findById(id)
+  activate AR
+  AR --> S : aluno
+  deactivate AR
+  S -> S : validarUnicidade(dados, id)
+  note right of S : existsByCpfAndIdNot,\nexistsByEmailAndIdNot,\nexistsByLoginAndIdNot
+  break CPF, email ou login em uso por outro usuário
+    S --> C : RegraNegocioException
+    C --> V : 422
+  end
+  S -> S : aplicar(aluno, dados)
+  S -> A : setters (nome, email, cpf, rg, curso, endereço, instituição, login)
+  opt nova senha informada
+    S -> A : autenticar(senhaAtual, passwordEncoder)
+    activate A
+    A --> S : boolean
+    deactivate A
+    break senha atual incorreta
+      S --> C : RegraNegocioException
+      C --> V : 422 "Senha atual incorreta"
+    end
+    S -> B : encode(senha)
+    activate B
+    B --> S : hash
+    deactivate B
+    S -> A : setSenhaHash(hash)
+  end
+  S --> C : aluno
+  deactivate S
+  note right of S : alterações gravadas no commit\n(entidade gerenciada pelo JPA)
+  C --> V : 200 AlunoResponse
+  deactivate C
+  V -> V : renomear(nome) na sessão
+  V --> U : "Cadastro atualizado"
+  deactivate V
+
+else excluir
+  U -> V : "Excluir minha conta" + confirmar
+  activate V
+  V -> C : DELETE /api/alunos/{id}
+  activate C
+  C -> S : excluir(id)
+  activate S
+  S -> AR : findById(id)
+  activate AR
+  AR --> S : aluno
+  deactivate AR
+  S -> TR : existsMovimentacao(aluno.conta.id)
+  activate TR
+  TR --> S : boolean
+  deactivate TR
+  break aluno já recebeu ou resgatou moedas
+    S --> C : RegraNegocioException
+    C --> V : 422 "Aluno possui movimentações de moedas..."
+    note right of S : preserva o extrato do professor
+  end
+  S -> AR : delete(aluno)
+  activate AR
+  AR -> A : <<destroy>>
+  destroy A
+  AR --> S
+  deactivate AR
+  S --> C
+  deactivate S
+  C --> V : 204 No Content
+  deactivate C
+  V -> V : sair()
+  V --> U : volta à tela inicial
+  deactivate V
+end
+@enduml

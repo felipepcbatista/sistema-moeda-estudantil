@@ -1,0 +1,58 @@
+@startuml sd01-autenticar-se
+!include _estilo.iuml
+title sd Autenticar-se (UC01 / US01)
+
+actor "usuário:\nAluno | Professor |\nEmpresa Parceira" as U
+boundary ":Login" as V
+control ":AutenticacaoController" as C
+participant ":AutenticacaoService" as S
+participant ":UsuarioRepository" as R
+entity "usuario:Usuario" as E
+participant ":PasswordEncoder\n(BCrypt)" as B
+participant ":TokenService" as T
+participant ":JwtEncoder" as J
+
+U -> V : informar(login, senha)
+activate V
+V -> C : POST /api/auth/login {login, senha}
+activate C
+C -> S : login(login, senha)
+activate S
+S -> R : findByLogin(login.trim())
+activate R
+R --> S : Optional<Usuario>
+deactivate R
+opt usuário encontrado
+  S -> E : autenticar(senha, passwordEncoder)
+  activate E
+  E -> B : matches(senha, senhaHash)
+  activate B
+  B --> E : boolean
+  deactivate B
+  E --> S : boolean
+  deactivate E
+end
+alt login inexistente ou senha incorreta
+  S --> C : CredenciaisInvalidasException
+  C --> V : 401 "Login ou senha inválidos"
+  V --> U : exibir mensagem de erro
+  note right of S : mesma mensagem nos dois casos:\nnão revela quais logins existem
+else credenciais válidas
+  S -> S : perfil, nome = switch (tipo do usuario)
+  S -> T : gerar(usuario.id, perfil, nome)
+  activate T
+  T -> J : encode(HS256, {sub, perfil, nome, exp = agora + 8h})
+  activate J
+  J --> T : jwt
+  deactivate J
+  T --> S : token
+  deactivate T
+  S --> C : SessaoResponse(id, perfil, nome, token)
+  C --> V : 200 {id, perfil, nome, token}
+  V -> V : entrar(sessao): definirToken(token)
+  V --> U : abrir o painel do perfil
+end
+deactivate S
+deactivate C
+deactivate V
+@enduml

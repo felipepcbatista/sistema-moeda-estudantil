@@ -1,0 +1,60 @@
+@startuml sd11-conferir-resgate
+!include _estilo.iuml
+title sd Conferir Resgate (UC11 / RN10)
+
+actor ":Empresa Parceira" as U
+boundary ":PainelEmpresa" as V
+control ":EmpresaParceira\nController" as C
+participant ":EmpresaParceira\nService" as ES
+participant ":TransacaoService" as S
+participant ":TransacaoRepository" as TR
+participant ":AlunoRepository" as AR
+
+U -> V : abrir painel
+activate V
+ref over V, C : sd Autorizar Requisição (ROLE_EMPRESA e acesso.ehOProprio(id))
+par Promise.all — carregadas em paralelo
+  ref over V, C : sd Gerenciar Vantagens (listagem: GET /api/empresas/{id}/vantagens)
+else
+  V -> C : GET /api/empresas/{id}/resgates
+  activate C
+  C -> ES : buscarPorId(id)
+  activate ES
+  ES --> C : empresa | 404
+  deactivate ES
+  C -> S : resgatesDaEmpresa(id)
+  activate S
+  S -> TR : findResgatesDaEmpresa(id)
+  activate TR
+  note right of TR : join fetch da vantagem;\nmais recentes primeiro
+  TR --> S : List<ResgateVantagem>
+  deactivate TR
+  loop para cada resgate r
+    S -> S : nomeDoDono(r.contaOrigem.id, cache)
+    opt nome ainda não está no cache
+      S -> AR : findByContaId(contaId)
+      activate AR
+      AR --> S : aluno
+      deactivate AR
+    end
+    S -> S : ResgateEmpresaResponse(id, codigo, vantagem, aluno, valor, dataHora)
+  end
+  S --> C : resgates
+  deactivate S
+  C --> V : 200 List<ResgateEmpresaResponse>
+  deactivate C
+end
+
+U -> V : digitar(código apresentado pelo aluno)
+V -> V : codigoLimpo = só letras e números, maiúsculas
+opt codigoLimpo tem 8 caracteres
+  V -> V : conferido = resgates.find(r.codigo == codigoLimpo)
+  alt código encontrado
+    V --> U : "Código válido": vantagem · aluno · data do resgate
+  else
+    V --> U : "Código não encontrado"
+  end
+end
+deactivate V
+note over U, V : A conferência roda na própria tela, sobre a lista de resgates que a API\njá devolveu filtrada para a empresa logada: nenhuma rota recebe o código.
+@enduml

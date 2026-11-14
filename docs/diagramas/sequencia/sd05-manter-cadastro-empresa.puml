@@ -1,0 +1,107 @@
+@startuml sd05-manter-cadastro-empresa
+!include _estilo.iuml
+title sd Manter Cadastro de Empresa Parceira (UC05 / US05)
+
+actor ":Empresa Parceira" as U
+boundary ":EmpresaForm\n(Meu cadastro)" as V
+control ":EmpresaParceira\nController" as C
+participant ":EmpresaParceira\nService" as S
+participant ":EmpresaParceira\nRepository" as ER
+participant ":TransacaoRepository" as TR
+participant ":PasswordEncoder" as B
+entity "empresa:\nEmpresaParceira" as E
+entity "vantagens[i]:\nVantagem" as VT
+
+ref over V, C : sd Autorizar Requisição (ROLE_EMPRESA e acesso.ehOProprio(id), em toda rota abaixo)
+
+alt consultar
+  U -> V : abrir "Meu cadastro"
+  activate V
+  V -> C : GET /api/empresas/{id}
+  activate C
+  C -> S : buscarPorId(id)
+  activate S
+  S -> ER : findById(id)
+  activate ER
+  ER --> S : Optional<EmpresaParceira>
+  deactivate ER
+  S --> C : empresa | RecursoNaoEncontradoException (404)
+  deactivate S
+  C --> V : 200 EmpresaParceiraResponse
+  deactivate C
+  deactivate V
+
+else editar
+  U -> V : alterar dados [+ senhaAtual e nova senha]
+  activate V
+  V -> C : PUT /api/empresas/{id} {EmpresaParceiraRequest}
+  activate C
+  C -> S : atualizar(id, dados)
+  activate S
+  S -> ER : findById(id)
+  activate ER
+  ER --> S : empresa
+  deactivate ER
+  S -> S : validarUnicidade(dados, id)
+  break CNPJ, email ou login em uso por outra empresa/usuário
+    S --> C : RegraNegocioException
+    C --> V : 422
+  end
+  S -> E : setNomeFantasia, setCnpj, setEmail, setLogin
+  opt nova senha informada
+    S -> E : autenticar(senhaAtual, passwordEncoder)
+    activate E
+    E --> S : boolean
+    deactivate E
+    break senha atual incorreta
+      S --> C : RegraNegocioException
+      C --> V : 422 "Senha atual incorreta"
+    end
+    S -> B : encode(senha)
+    activate B
+    B --> S : hash
+    deactivate B
+    S -> E : setSenhaHash(hash)
+  end
+  S --> C : empresa
+  deactivate S
+  C --> V : 200 EmpresaParceiraResponse
+  deactivate C
+  deactivate V
+
+else excluir
+  U -> V : "Excluir minha conta" + confirmar
+  activate V
+  V -> C : DELETE /api/empresas/{id}
+  activate C
+  C -> S : excluir(id)
+  activate S
+  S -> ER : findById(id)
+  activate ER
+  ER --> S : empresa
+  deactivate ER
+  S -> TR : existsResgateDaEmpresa(id)
+  activate TR
+  TR --> S : boolean
+  deactivate TR
+  break alguma vantagem da empresa já foi resgatada
+    S --> C : RegraNegocioException
+    C --> V : 422 "Empresa possui vantagens já resgatadas..."
+    note right of S : cupons emitidos dependem da vantagem
+  end
+  S -> ER : delete(empresa)
+  activate ER
+  ER -> VT : <<destroy>> (cascade das vantagens)
+  destroy VT
+  ER -> E : <<destroy>>
+  destroy E
+  ER --> S
+  deactivate ER
+  S --> C
+  deactivate S
+  C --> V : 204 No Content
+  deactivate C
+  V -> V : sair()
+  deactivate V
+end
+@enduml

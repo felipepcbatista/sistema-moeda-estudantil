@@ -146,6 +146,7 @@ package "service" {
     + reativar(id: Long): Vantagem
     + listarAtivas(): List<Vantagem>
     + listarDaEmpresa(empresaId: Long): List<Vantagem>
+    + buscarPorId(id: Long): Vantagem
   }
 
   class FotoStorage {

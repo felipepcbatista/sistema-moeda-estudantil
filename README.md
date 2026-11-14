@@ -5,6 +5,7 @@
 | **Lab03S01** | Modelagem: casos de uso, histórias de usuário, diagrama de classes e de componentes | 1–7 |
 | **Lab03S02** | Modelo ER, estratégia de acesso a dados (ORM + Repository/DAO), CRUDs de aluno e empresa parceira (front-end + back-end) e, adiantado, o fluxo de moedas completo | 8–11 |
 | **Lab03S03** | CRUDs na versão final (Spring Security + JWT, cada usuário só acessa os próprios dados), slides da arquitetura, da camada de persistência e tutorial das tecnologias | 12–13 |
+| **Lab04S01** | Diagramas de sequência (um por caso de uso + autorização e crédito semestral), Diagrama de Visão Geral da Interação e caso de uso UC11 (Conferir Resgate) incorporado ao modelo | 14 |
 
 ## 1. Contexto
 
@@ -154,6 +155,18 @@ Todos os atores autenticam-se com login e senha antes de qualquer operação (ex
 - O sistema gera um código único de resgate (RN10).
 - O aluno recebe email de cupom com o código; a empresa parceira recebe email com o mesmo código para conferência (RN10).
 
+---
+
+### US11 — Conferir resgate *(incluída na Lab04S01)*
+**Como** empresa parceira,
+**quero** digitar o código apresentado pelo aluno e ver se ele corresponde a um resgate das minhas vantagens,
+**para** realizar a troca presencial com segurança.
+
+*Critérios de aceite:*
+- Só aparecem resgates das vantagens da própria empresa.
+- Código válido mostra a vantagem, o aluno e a data do resgate; código inexistente mostra "Código não encontrado".
+- O código é aceito com ou sem espaços/hífens e em minúsculas.
+
 ## 5. Diagrama de Casos de Uso
 
 ![Diagrama de Casos de Uso](docs/diagramas/diagrama-caso-de-uso.png)
@@ -165,6 +178,7 @@ Fonte PlantUML em [`docs/diagramas/diagrama-caso-de-uso.puml`](docs/diagramas/di
 - **Pré-cadastro de instituições e professores** (RN02, RN03) não é caso de uso: o enunciado não define um ator que faça esse cadastro (a lista vem da instituição no momento da parceria). É tratado como carga inicial de dados.
 - **Serviço de email** não é ator (RN11).
 - **Resgatar Vantagem** inclui **Consultar Vantagens**: o aluno precisa selecionar uma vantagem cadastrada para trocar.
+- **Conferir Resgate (UC11)** entrou na Lab04S01: a funcionalidade já existia no código desde a S02 (painel da empresa → *Conferir código*), mas não estava no modelo. Ao desenhar os diagramas de sequência a divergência apareceu, e o modelo foi atualizado para refletir o código.
 
 ## 6. Diagrama de Classes
 
@@ -348,7 +362,56 @@ Sem token, ou com token inválido ou expirado: **401**. Com token válido acessa
 
 Slides da apresentação (arquitetura, camada de persistência e tutorial das tecnologias, 18 slides com notas de fala): https://claude.ai/artifact/5McHAieW5BrBgzzpKYjUZm. O roteiro com a divisão do tempo, o checklist de antes da apresentação e o código-fonte dos slides estão em [`docs/apresentacao/`](docs/apresentacao/).
 
-## 14. Como executar
+## 14. Modelo de interação (Lab04S01)
+
+Diagramas de sequência e Diagrama de Visão Geral da Interação, em PlantUML (fontes `.puml` ao lado de cada `.png`). **Foram desenhados a partir do código já implementado**, mensagem a mensagem: cada seta corresponde a uma chamada real de método ou rota HTTP, para manter modelo e código alinhados (critério de avaliação).
+
+### 14.1 Implementação dos casos de uso restantes
+
+Não havia caso de uso pendente: o fluxo de moedas (UC07 a UC10) foi adiantado na Lab03S02 (Seção 11). O que a sprint revelou foi o contrário — uma funcionalidade implementada sem modelo (a conferência de código pela empresa), que virou o **UC11 Conferir Resgate** (Seções 4 e 5).
+
+### 14.2 Diagramas de sequência
+
+| Diagrama | Caso de uso | Fragmentos usados |
+|---|---|---|
+| [sd00 Autorizar Requisição](docs/diagramas/sequencia/sd00-autorizar-requisicao.png) | Fragmento reutilizado (JWT + `@PreAuthorize` + `Acesso`) | `alt`, `break` |
+| [sd01 Autenticar-se](docs/diagramas/sequencia/sd01-autenticar-se.png) | UC01 | `opt`, `alt` |
+| [sd02 Cadastrar-se como Aluno](docs/diagramas/sequencia/sd02-cadastrar-aluno.png) | UC02 | `break`, «create», `ref` |
+| [sd03 Manter Cadastro de Aluno](docs/diagramas/sequencia/sd03-manter-cadastro-aluno.png) | UC03 | `ref`, `alt`, `opt`, `break`, «destroy» |
+| [sd04 Cadastrar-se como Empresa](docs/diagramas/sequencia/sd04-cadastrar-empresa.png) | UC04 | `break`, «create», `ref` |
+| [sd05 Manter Cadastro de Empresa](docs/diagramas/sequencia/sd05-manter-cadastro-empresa.png) | UC05 | `ref`, `alt`, `opt`, `break`, «destroy» |
+| [sd06 Gerenciar Vantagens](docs/diagramas/sequencia/sd06-gerenciar-vantagens.png) | UC06 | `ref`, `alt`, `opt`, `break`, «create» |
+| [sd07 Enviar Moedas](docs/diagramas/sequencia/sd07-enviar-moedas.png) | UC07 | `ref`, `break`, `critical`, `loop`, mensagem assíncrona |
+| [sd08 Consultar Extrato](docs/diagramas/sequencia/sd08-consultar-extrato.png) | UC08 | `alt`, `ref`, `loop`, `opt`, multiobjeto |
+| [sd09 Consultar Vantagens](docs/diagramas/sequencia/sd09-consultar-vantagens.png) | UC09 | `par`, `ref`, `loop`, `alt` |
+| [sd10 Resgatar Vantagem](docs/diagramas/sequencia/sd10-resgatar-vantagem.png) | UC10 (inclui UC09) | `ref`, `break`, `critical`, `loop`, «create», mensagem assíncrona |
+| [sd11 Conferir Resgate](docs/diagramas/sequencia/sd11-conferir-resgate.png) | UC11 | `ref`, `par`, `loop`, `opt`, `alt` |
+| [sd12 Creditar Semestre](docs/diagramas/sequencia/sd12-creditar-semestre.png) | Processo de sistema (RN04) | `loop`, `opt`, «create», mensagem assíncrona |
+
+**Convenções:** seta cheia = mensagem síncrona; seta aberta = assíncrona; tracejada = retorno; `:Classe` = objeto anônimo; `nome:Classe` = objeto nomeado. Os objetos seguem o MVC: *boundary* = tela React (View), *control* = Controller REST, demais = Model (services, repositories e entidades).
+
+**Decisões de modelagem:**
+- **Autorização como `ref`.** A checagem de token e de posse (Seção 12) se repete em toda rota protegida. Em vez de redesenhá-la em cada diagrama, ela está em `sd00` e é referenciada com `ref` — o mesmo uso do operador mostrado em aula para reaproveitar interações.
+- **`critical` nas movimentações de moedas.** Em `sd07`, `sd10` e `sd12`, o trecho com `SELECT ... FOR UPDATE`, conferência de saldo, débito/crédito e registro é atômico (`@Transactional` + trava pessimista). É exatamente a semântica de região crítica.
+- **`break` para regras de negócio.** Cada `RegraNegocioException` interrompe o fluxo e vira `422`; validação de entrada vira `400`; recurso inexistente `404`. Os diagramas mostram a mensagem que o usuário vê.
+- **Email assíncrono depois do commit.** O `EmailNotificacaoService` só registra a mensagem durante a transação; o envio ao SMTP é assíncrono e acontece após o commit (linha divisória "commit da transação"). Por isso nenhum email avisa de uma operação desfeita.
+- **`par` onde o código é paralelo.** O painel do aluno e o da empresa carregam dois recursos com `Promise.all`; os dois emails do resgate, ao contrário, são sequenciais e foram desenhados assim.
+- **Crédito semestral** não é caso de uso (Seção 5), mas tem diagrama próprio porque é a origem das moedas que circulam no sistema.
+
+### 14.3 Diagrama de Visão Geral da Interação
+
+![Diagrama de Visão Geral da Interação](docs/diagramas/diagrama-visao-geral-interacao.png)
+
+Fonte em [`docs/diagramas/diagrama-visao-geral-interacao.puml`](docs/diagramas/diagrama-visao-geral-interacao.puml). Funciona como o "mapa de capítulos" do sistema: cada nó é um quadro `ref` para um diagrama de sequência da tabela acima, e o fluxo de controle mostra como eles se encadeiam — cadastro ou autenticação, desvio por perfil da sessão e repetição das ações até sair. O crédito semestral roda em paralelo às sessões (`fork`), disparado pelo agendador.
+
+### 14.4 Mudanças nos modelos anteriores
+
+- **Diagrama de casos de uso:** novo UC11 *Conferir Resgate* (Empresa Parceira, `<<include>>` Autenticar-se).
+- **Histórias de usuário:** nova US11.
+- **Diagrama de classes:** entrou `VantagemService.buscarPorId(id)`, usado pela consulta de vantagem e pela edição/desativação, que existia no código mas faltava no modelo. As demais classes e métodos públicos usados nos diagramas de sequência já estavam modelados.
+- Diagrama de componentes: sem mudança.
+
+## 15. Como executar
 
 Pré-requisitos: Java 21, Maven, Node 20+ e Docker.
 

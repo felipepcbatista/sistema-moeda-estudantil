@@ -1,0 +1,108 @@
+@startuml sd07-enviar-moedas
+!include _estilo.iuml
+title sd Enviar Moedas (UC07 / US07 / RN05 / RN06)
+
+actor ":Professor" as U
+boundary ":PainelProfessor" as V
+control ":ProfessorController" as C
+participant ":ProfessorService" as PS
+participant ":TransacaoService" as S
+participant ":ProfessorRepository" as PR
+participant ":AlunoRepository" as AR
+participant ":EntityManager" as EM
+entity "contaProf:Conta" as KP
+entity "contaAluno:Conta" as KA
+participant ":TransacaoRepository" as TR
+participant ":EmailNotificacao\nService" as N
+participant "Servidor SMTP\n(JavaMailSender)" as SMTP
+
+ref over V, C : sd Autorizar Requisição (ROLE_PROFESSOR e acesso.ehOProprio(id), em toda rota abaixo)
+
+U -> V : abrir "Reconhecer alunos"
+activate V
+V -> C : GET /api/professores/{id}/alunos
+activate C
+C -> PS : listarAlunos(id)
+activate PS
+PS -> PR : findById(id)
+activate PR
+PR --> PS : professor
+deactivate PR
+PS -> AR : findByInstituicaoIdOrderByNomeAsc(professor.instituicao.id)
+activate AR
+AR --> PS : List<Aluno>
+deactivate AR
+PS --> C : alunos
+deactivate PS
+C --> V : 200 List<AlunoResumoResponse> (nome, curso, saldo)
+deactivate C
+
+U -> V : reconhecer(aluno, valor, motivo)
+V -> C : POST /api/professores/{id}/envios {alunoId, valor, motivo}
+activate C
+C -> S : enviarMoedas(id, alunoId, valor, motivo)
+activate S
+break valor <= 0 ou motivo em branco
+  S --> C : RegraNegocioException
+  C --> V : 422 "A quantidade deve ser maior que zero" | "O motivo do reconhecimento é obrigatório"
+end
+S -> PR : findById(professorId)
+activate PR
+PR --> S : professor | 404
+deactivate PR
+S -> AR : findById(alunoId)
+activate AR
+AR --> S : aluno | 404
+deactivate AR
+break aluno de outra instituição
+  S --> C : RegraNegocioException
+  C --> V : 422 "O aluno não pertence à instituição do professor"
+end
+
+critical @Transactional — débito, crédito e registro juntos ou nada
+  S -> S : travar(contaProf, contaAluno)
+  activate S
+  S -> EM : flush()
+  loop para cada conta, em ordem crescente de id (evita deadlock)
+    S -> EM : refresh(conta, PESSIMISTIC_WRITE)
+    note right of EM : SELECT ... FOR UPDATE
+  end
+  deactivate S
+  S -> KP : possuiSaldo(valor)
+  activate KP
+  KP --> S : boolean
+  deactivate KP
+  break saldo insuficiente (rollback)
+    S --> C : RegraNegocioException
+    C --> V : 422 "Saldo insuficiente: você tem X moedas"
+  end
+  S -> KP : debitar(valor)
+  S -> KA : creditar(valor)
+  create entity "envio:EnvioMoedas" as E
+  S -> E : <<create>> EnvioMoedas()
+  S -> E : setValor, setMotivo(motivo.trim()),\nsetContaOrigem(contaProf), setContaDestino(contaAluno)
+  S -> TR : save(envio)
+  activate TR
+  TR --> S
+  deactivate TR
+  S -> N : notificarRecebimento(envio)
+  activate N
+  N -> AR : findByContaId(contaAluno.id)
+  N -> PR : findByContaId(contaProf.id)
+  N -> N : enviarAposCommit(aluno.email, "Você recebeu N moedas!", texto)
+  note right of N : só registra a mensagem\npara depois do commit
+  deactivate N
+end
+S --> C : envio
+deactivate S
+== commit da transação ==
+N ->> SMTP : send(mensagem) — afterCommit()
+opt MailException
+  N -> N : log.warn(...) — a transferência não é desfeita
+end
+C --> V : 201 EnvioMoedasResponse
+deactivate C
+V -> V : atualizarSaldo()
+V --> U : saldo do cabeçalho reduzido
+deactivate V
+@enduml

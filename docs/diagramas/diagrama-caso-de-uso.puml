@@ -19,6 +19,7 @@ rectangle "Sistema de Moeda Estudantil" {
   usecase "Consultar Extrato" as UC08
   usecase "Consultar Vantagens" as UC09
   usecase "Resgatar Vantagem" as UC10
+  usecase "Conferir Resgate" as UC11
 }
 
 Aluno --> UC02
@@ -33,6 +34,7 @@ Professor --> UC08
 Empresa --> UC04
 Empresa --> UC05
 Empresa --> UC06
+Empresa --> UC11
 
 UC03 ..> UC01 : <<include>>
 UC05 ..> UC01 : <<include>>
@@ -42,5 +44,6 @@ UC08 ..> UC01 : <<include>>
 UC09 ..> UC01 : <<include>>
 UC10 ..> UC01 : <<include>>
 UC10 ..> UC09 : <<include>>
+UC11 ..> UC01 : <<include>>
 
 @enduml
