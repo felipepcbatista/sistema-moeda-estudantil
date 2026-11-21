@@ -75,6 +75,13 @@ entity "vantagem" as vantagem {
   * empresa_id : BIGINT <<FK>>
 }
 
+entity "foto" as foto {
+  * nome : VARCHAR(60) <<PK>>  (UUID + extensão)
+  --
+  * dados : BYTEA
+  * criada_em : TIMESTAMP
+}
+
 entity "transacao" as transacao {
   * id : BIGINT <<PK>>
   --
@@ -104,5 +111,6 @@ empresa ||--o{ vantagem : oferece
 conta |o--o{ transacao : "origem"
 conta |o--o{ transacao : "destino"
 vantagem |o--o{ transacao : "resgatada em"
+vantagem }o..|| foto : "foto_url = /api/fotos/{nome}\n(V3, Lab04S02; sem FK)"
 
 @enduml

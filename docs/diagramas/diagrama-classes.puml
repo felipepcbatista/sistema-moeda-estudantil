@@ -65,6 +65,12 @@ package "model" {
     - ativa: boolean
   }
 
+  class Foto {
+    - nome: String
+    - dados: byte[]
+    - criadaEm: LocalDateTime
+  }
+
   abstract class Transacao {
     # id: Long
     # valor: int
@@ -182,7 +188,16 @@ package "service" {
 
   class EmailNotificacaoService
 
+  interface CanalEmail {
+    + enviar(para: String, assunto: String, texto: String): void
+  }
+  class SmtpCanalEmail <<app.mail.provedor=smtp>>
+  class MailtrapCanalEmail <<app.mail.provedor=mailtrap>>
+
   NotificacaoService <|.. EmailNotificacaoService
+  EmailNotificacaoService --> CanalEmail
+  CanalEmail <|.. SmtpCanalEmail
+  CanalEmail <|.. MailtrapCanalEmail
   TransacaoService --> NotificacaoService
 }
 
@@ -203,6 +218,7 @@ TransacaoService ..> Transacao : cria
 AlunoService ..> Aluno
 EmpresaParceiraService ..> EmpresaParceira
 VantagemService ..> Vantagem
+FotoStorage ..> Foto : grava e lê
 AutenticacaoService ..> Usuario
 ProfessorService ..> Professor
 

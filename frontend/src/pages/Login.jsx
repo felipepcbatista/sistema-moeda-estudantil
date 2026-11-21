@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import Campo from '../components/Campo.jsx'
 import Moeda from '../components/Moeda.jsx'
@@ -19,6 +19,15 @@ export default function Login() {
   const [dados, setDados] = useState({ login: '', senha: '' })
   const [erro, setErro] = useState({ mensagem: null, campos: {} })
   const [enviando, setEnviando] = useState(false)
+  const [demorando, setDemorando] = useState(false)
+
+  // Na nuvem gratuita (Render) o back-end dorme apos 15 min sem uso e leva 1-2 min para acordar.
+  // Se o login passar de 5 s, avisa em vez de parecer travado.
+  useEffect(() => {
+    if (!enviando) return setDemorando(false)
+    const espera = setTimeout(() => setDemorando(true), 5000)
+    return () => clearTimeout(espera)
+  }, [enviando])
 
   const alterar = (e) => setDados({ ...dados, [e.target.name]: e.target.value })
 
@@ -45,6 +54,7 @@ export default function Login() {
         <p className="suave">Professores, alunos e empresas parceiras.</p>
         {expirou && !erro.mensagem && <p className="aviso">Sua sessão expirou. Entre novamente.</p>}
         {erro.mensagem && <p className="alerta">{erro.mensagem}</p>}
+        {demorando && <p className="aviso">O servidor estava em repouso e está acordando. Isso pode levar até 2 minutos no primeiro acesso.</p>}
 
         <form onSubmit={submeter} noValidate className="pilha">
           <Campo rotulo="Login" nome="login" autoComplete="username" autoFocus value={dados.login} onChange={alterar} erro={erro.campos.login} />

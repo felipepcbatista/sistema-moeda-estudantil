@@ -1,0 +1,54 @@
+# Blueprint do Render (infraestrutura como codigo): banco PostgreSQL + API Spring Boot.
+# No painel do Render: New > Blueprint > este repositorio. As duas variaveis marcadas com sync: false
+# (credenciais do Mailtrap) sao pedidas na criacao e nunca ficam no repositorio.
+
+databases:
+  - name: moeda-estudantil-db
+    plan: free
+    region: virginia
+    databaseName: moeda_estudantil
+    user: moeda
+    postgresMajorVersion: "16"
+
+services:
+  - type: web
+    name: moeda-estudantil-api
+    runtime: docker
+    plan: free
+    region: virginia
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    # rota publica e barata: o Render so libera o trafego depois que ela responde 200
+    healthCheckPath: /api/instituicoes
+    autoDeployTrigger: commit
+    envVars:
+      - key: DB_HOST
+        fromDatabase:
+          name: moeda-estudantil-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: moeda-estudantil-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: moeda-estudantil-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: moeda-estudantil-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: moeda-estudantil-db
+          property: password
+      # segredo do JWT gerado pelo Render (256 bits); nunca e o valor de desenvolvimento
+      - key: JWT_SEGREDO
+        generateValue: true
+      - key: MAIL_PROVEDOR
+        value: mailtrap
+      - key: MAILTRAP_URL
+        sync: false
+      - key: MAILTRAP_TOKEN
+        sync: false

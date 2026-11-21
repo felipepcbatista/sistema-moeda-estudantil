@@ -13,7 +13,7 @@
 
     <groupId>br.pucminas</groupId>
     <artifactId>moeda-estudantil</artifactId>
-    <version>0.3.0</version>
+    <version>0.4.0</version>
     <name>moeda-estudantil</name>
     <description>Sistema de Moeda Estudantil - Lab03 Projeto de Software (PUC Minas)</description>
 

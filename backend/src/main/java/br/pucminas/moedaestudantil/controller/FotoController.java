@@ -1,6 +1,9 @@
 package br.pucminas.moedaestudantil.controller;
 
+import java.time.Duration;
+
 import org.springframework.core.io.Resource;
+import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.MediaTypeFactory;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +29,10 @@ public class FotoController {
             return ResponseEntity.notFound().build();
         }
         MediaType tipo = MediaTypeFactory.getMediaType(arquivo).orElse(MediaType.APPLICATION_OCTET_STREAM);
-        return ResponseEntity.ok().contentType(tipo).body(foto);
+        // o nome e unico e a foto nunca muda (edicao gera foto nova): o navegador pode guardar por 1 ano,
+        // o que poupa o banco a cada abertura da vitrine
+        return ResponseEntity.ok().contentType(tipo)
+                .cacheControl(CacheControl.maxAge(Duration.ofDays(365)).cachePublic().immutable())
+                .body(foto);
     }
 }

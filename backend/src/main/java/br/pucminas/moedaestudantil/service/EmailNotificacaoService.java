@@ -4,10 +4,6 @@ import java.time.format.DateTimeFormatter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.MailException;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -21,9 +17,9 @@ import br.pucminas.moedaestudantil.repository.AlunoRepository;
 import br.pucminas.moedaestudantil.repository.ProfessorRepository;
 
 /**
- * Envia os emails via JavaMailSender (SMTP).
+ * Monta os emails do sistema e os entrega pelo {@link CanalEmail} configurado (SMTP local ou API HTTP na nuvem).
  * A mensagem e montada dentro da transacao, mas so e enviada depois do commit: um email nunca avisa
- * de uma transacao que acabou desfeita, e uma falha de SMTP nunca desfaz a transacao (so e registrada no log).
+ * de uma transacao que acabou desfeita, e uma falha no envio nunca desfaz a transacao (so e registrada no log).
  */
 @Service
 public class EmailNotificacaoService implements NotificacaoService {
@@ -31,18 +27,15 @@ public class EmailNotificacaoService implements NotificacaoService {
     private static final Logger log = LoggerFactory.getLogger(EmailNotificacaoService.class);
     private static final DateTimeFormatter DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
-    private final JavaMailSender mailSender;
+    private final CanalEmail canal;
     private final AlunoRepository alunoRepository;
     private final ProfessorRepository professorRepository;
-    private final String remetente;
 
-    public EmailNotificacaoService(JavaMailSender mailSender, AlunoRepository alunoRepository,
-                                   ProfessorRepository professorRepository,
-                                   @Value("${app.mail.remetente}") String remetente) {
-        this.mailSender = mailSender;
+    public EmailNotificacaoService(CanalEmail canal, AlunoRepository alunoRepository,
+                                   ProfessorRepository professorRepository) {
+        this.canal = canal;
         this.alunoRepository = alunoRepository;
         this.professorRepository = professorRepository;
-        this.remetente = remetente;
     }
 
     @Override
@@ -109,29 +102,23 @@ public class EmailNotificacaoService implements NotificacaoService {
     }
 
     private void enviarAposCommit(String para, String assunto, String texto) {
-        SimpleMailMessage mensagem = new SimpleMailMessage();
-        mensagem.setFrom(remetente);
-        mensagem.setTo(para);
-        mensagem.setSubject(assunto);
-        mensagem.setText(texto);
-
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
-                    enviar(mensagem);
+                    enviar(para, assunto, texto);
                 }
             });
         } else {
-            enviar(mensagem);
+            enviar(para, assunto, texto);
         }
     }
 
-    private void enviar(SimpleMailMessage mensagem) {
+    private void enviar(String para, String assunto, String texto) {
         try {
-            mailSender.send(mensagem);
-        } catch (MailException e) {
-            log.warn("Falha ao enviar email para {}: {}", String.join(",", mensagem.getTo()), e.getMessage());
+            canal.enviar(para, assunto, texto);
+        } catch (RuntimeException e) {
+            log.warn("Falha ao enviar email para {}: {}", para, e.getMessage());
         }
     }
 }

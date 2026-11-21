@@ -1,0 +1,68 @@
+@startuml diagrama-implantacao
+' Diagrama de Implantacao (Lab04S02): onde cada artefato roda e como os nos se comunicam.
+!pragma layout smetana
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam nodeBackgroundColor #FFFFE0
+skinparam artifactBackgroundColor #FFFFFF
+skinparam databaseBackgroundColor #EEF3FA
+skinparam ArrowColor #333333
+skinparam noteBackgroundColor #F6F6F6
+top to bottom direction
+
+title Diagrama de Implantação — Sistema de Moeda Estudantil (Release 2)
+
+node "Dispositivo do usuário" as Dispositivo <<device>> {
+  node "Navegador web" as Navegador <<executionEnvironment>> {
+    artifact "SPA React\n(index.html + assets JS/CSS)" as SPA
+  }
+}
+
+node "Vercel" as Vercel <<cloud: CDN global>> {
+  node "Edge Network" as Edge <<executionEnvironment>> {
+    artifact "frontend/dist\n(build Vite)" as Dist
+    artifact "vercel.json\n(rewrite /api/* → Render;\n demais rotas → index.html)" as Rewrite
+  }
+}
+
+node "Render — região Virginia (EUA)" as Render <<cloud>> {
+  node "Web Service moeda-estudantil-api\nplano free: 512 MB, 0,1 CPU" as WebService <<container: Docker>> {
+    node "JRE 21 (eclipse-temurin)" as JRE <<executionEnvironment>> {
+      artifact "moeda-estudantil-0.4.0.jar\n(Spring Boot: Controller,\nService, Repository, Security/JWT)" as Jar
+    }
+  }
+  database "PostgreSQL 16\nmoeda-estudantil-db\n(plano free, 1 GB)" as Postgres <<Render Postgres>> {
+    artifact "schema Flyway V1–V3\n(usuários, contas, transações,\nvantagens, fotos)" as Schema
+  }
+}
+
+node "Mailtrap" as Mailtrap <<cloud: serviço externo>> {
+  artifact "Email API / Sandbox\n(caixa de testes)" as MailApi
+}
+
+node "GitHub" as GitHub <<cloud>> {
+  artifact "felipepcbatista/\nsistema-moeda-estudantil\n(main)" as Repo
+}
+
+Navegador --> Edge : HTTPS\n(páginas e /api/*)
+Edge --> WebService : HTTPS 443\n(proxy das chamadas /api/*)
+JRE --> Postgres : JDBC sobre TCP 5432\n(rede interna do Render)
+JRE --> Mailtrap : HTTPS 443 / REST JSON\n(notificações RN06, RN10)
+Repo ..> Vercel : <<deploy>>\npush na main → build Vite
+Repo ..> Render : <<deploy>>\npush na main → build Docker\n(render.yaml)
+
+note right of WebService
+  Dorme após 15 min sem tráfego;
+  o 1º acesso leva ~1–2 min
+  (medido: 99 s com 0,1 CPU).
+  Disco efêmero: por isso as
+  fotos ficam no PostgreSQL.
+end note
+
+note right of Mailtrap
+  O Render gratuito bloqueia SMTP
+  (25/465/587): o envio sai por
+  API HTTP. Localmente continua
+  o SMTP do Mailpit.
+end note
+@enduml

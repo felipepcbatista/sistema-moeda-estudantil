@@ -50,7 +50,7 @@ package "Back-end (Spring Boot) — MVC" {
 }
 
 database "PostgreSQL" as DB
-node "Servidor SMTP" as SMTP
+node "Serviço de Email\n(local: Mailpit via SMTP;\nnuvem: Mailtrap via API HTTP)" as SMTP
 
 interface "API REST (JSON)" as API
 
@@ -94,6 +94,7 @@ STrans --> Repo
 Repo ..> Entidades
 Repo --> DB : JDBC
 Flyway --> DB : versiona o schema
-SNotif --> SMTP : JavaMailSender
+Fotos --> Repo : fotos na tabela foto (V3)
+SNotif --> SMTP : CanalEmail
 
 @enduml

@@ -17,6 +17,7 @@ package "service" {
   class ProfessorService
   class VantagemService
   class TransacaoService
+  class FotoStorage
 }
 
 package "repository (Spring Data JPA — DAO)" {
@@ -55,6 +56,9 @@ package "repository (Spring Data JPA — DAO)" {
   interface ProfessorRepository {
     + findByContaId(contaId: Long): Optional<Professor>
   }
+  interface FotoRepository {
+    (só métodos herdados: save, findById)
+  }
   interface VantagemRepository {
     + findByAtivaTrueOrderByNomeAsc(): List<Vantagem>
     + findByEmpresaIdOrderByNomeAsc(id: Long): List<Vantagem>
@@ -63,7 +67,7 @@ package "repository (Spring Data JPA — DAO)" {
 
 package "Infraestrutura" {
   component "Hibernate (ORM)" as Hibernate
-  component "Flyway\n(V1 schema, V2 carga inicial)" as Flyway
+  component "Flyway\n(V1 schema, V2 carga inicial,\nV3 fotos no banco)" as Flyway
   database "PostgreSQL" as DB
 }
 
@@ -80,6 +84,8 @@ ProfessorService --> ProfessorRepository
 ProfessorService --> AlunoRepository
 VantagemService --> VantagemRepository
 VantagemService --> EmpresaParceiraRepository
+VantagemService --> FotoStorage
+FotoStorage --> FotoRepository
 TransacaoService --> TransacaoRepository
 TransacaoService --> ProfessorRepository
 TransacaoService --> AlunoRepository
@@ -93,6 +99,7 @@ JpaRepository <|-- InstituicaoEnsinoRepository
 JpaRepository <|-- TransacaoRepository
 JpaRepository <|-- ProfessorRepository
 JpaRepository <|-- VantagemRepository
+JpaRepository <|-- FotoRepository
 
 JpaRepository ..> Hibernate : implementado via
 Hibernate --> DB : SQL / JDBC

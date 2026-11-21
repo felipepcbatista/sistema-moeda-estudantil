@@ -158,6 +158,9 @@ class FluxoMoedasTest {
                 .andExpect(jsonPath("$.empresaNome").value("Cantina"))
                 .andReturn().getResponse().getContentAsString(), "$.fotoUrl");
         mvc.perform(get(fotoUrl)).andExpect(status().isOk());
+        // Lab04S02: a foto fica no banco (sobrevive ao reinicio do servidor na nuvem), byte a byte
+        assertThat(jdbc.queryForObject("SELECT dados FROM foto WHERE nome = ?", byte[].class,
+                fotoUrl.substring("/api/fotos/".length()))).isEqualTo(PNG);
 
         MockMultipartFile dados = new MockMultipartFile("dados", "", "application/json",
                 "{\"nome\":\"X\",\"descricao\":\"Y\",\"custoMoedas\":10}".getBytes());
