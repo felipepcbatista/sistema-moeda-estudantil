@@ -48,8 +48,8 @@ Navegador --> Edge : HTTPS\n(páginas e /api/*)
 Edge --> WebService : HTTPS 443\n(proxy das chamadas /api/*)
 JRE --> Postgres : JDBC sobre TCP 5432\n(rede interna do Render)
 JRE --> Mailtrap : HTTPS 443 / REST JSON\n(notificações RN06, RN10)
-Repo ..> Vercel : <<deploy>>\npush na main → build Vite
-Repo ..> Render : <<deploy>>\npush na main → build Docker\n(render.yaml)
+Repo ..> Vercel : <<deploy>>\nnpm run build + envio\nda pasta pelo painel
+Repo ..> Render : <<deploy>>\nBlueprint (render.yaml)\n→ build Docker
 
 note right of WebService
   Dorme após 15 min sem tráfego;

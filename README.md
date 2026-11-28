@@ -1,11 +1,16 @@
 # Sistema de Moeda Estudantil — PUC Minas | Projeto de Software (2S2026)
 
+**Aplicação no ar:** https://moeda-estudantil-gamma.vercel.app · API: https://moeda-estudantil-api-2vu5.onrender.com/api/instituicoes
+
+Contas de teste: professor `prof.ana` / `prof123` · aluno `maria.silva` / `aluno123` · empresa `cantina.coracao` / `empresa123`. O back-end está no plano gratuito do Render e dorme após 15 min sem uso: o primeiro acesso pode levar até ~2 min (a tela de login avisa).
+
 | Sprint | Entrega | Seções |
 |---|---|---|
 | **Lab03S01** | Modelagem: casos de uso, histórias de usuário, diagrama de classes e de componentes | 1–7 |
 | **Lab03S02** | Modelo ER, estratégia de acesso a dados (ORM + Repository/DAO), CRUDs de aluno e empresa parceira (front-end + back-end) e, adiantado, o fluxo de moedas completo | 8–11 |
 | **Lab03S03** | CRUDs na versão final (Spring Security + JWT, cada usuário só acessa os próprios dados), slides da arquitetura, da camada de persistência e tutorial das tecnologias | 12–13 |
 | **Lab04S01** | Diagramas de sequência (um por caso de uso + autorização e crédito semestral), Diagrama de Visão Geral da Interação e caso de uso UC11 (Conferir Resgate) incorporado ao modelo | 14 |
+| **Lab04S02** | Diagrama de Implantação e aplicação implantada na nuvem (Vercel + Render), com as adaptações que o plano gratuito exigiu | 15 |
 
 ## 1. Contexto
 
@@ -302,7 +307,7 @@ Implementa as histórias US01 e US06 a US10 em cima do schema que já existia, s
 - **"Seus alunos" = alunos da mesma instituição.** O enunciado não modela turma; o vínculo explícito do professor é com a instituição (RN03). O envio para aluno de outra instituição é recusado.
 - **Concorrência de saldo.** Antes de conferir o saldo, o `TransacaoService` trava as contas envolvidas (`SELECT ... FOR UPDATE`, em ordem de id para evitar deadlock). Sem isso, dois envios simultâneos poderiam ler o mesmo saldo e um sobrescrever o outro. O `CHECK (saldo >= 0)` do banco continua como última barreira.
 - **Email só depois do commit.** O `EmailNotificacaoService` monta a mensagem durante a transação e envia no `afterCommit`: nenhum email avisa de uma operação desfeita, e uma falha de SMTP não desfaz a transferência (fica registrada no log).
-- **Fotos em disco**, com nome aleatório gerado pelo servidor e servidas por `/api/fotos/{arquivo}` (componente "Armazenamento de Fotos" do diagrama de componentes).
+- **Fotos com nome aleatório** gerado pelo servidor e servidas por `/api/fotos/{arquivo}` (componente "Armazenamento de Fotos" do diagrama de componentes). Até a Lab04S01 ficavam em disco; na Lab04S02 passaram para o banco (Seção 15).
 - **Login:** nesta sprint o back-end só conferia a senha; a proteção das rotas com token entrou na Sprint 3 (Seção 12).
 
 **Rotas adicionadas:**
@@ -411,7 +416,61 @@ Fonte em [`docs/diagramas/diagrama-visao-geral-interacao.puml`](docs/diagramas/d
 - **Diagrama de classes:** entrou `VantagemService.buscarPorId(id)`, usado pela consulta de vantagem e pela edição/desativação, que existia no código mas faltava no modelo. As demais classes e métodos públicos usados nos diagramas de sequência já estavam modelados.
 - Diagrama de componentes: sem mudança.
 
-## 15. Como executar
+## 15. Implantação na nuvem (Lab04S02)
+
+| | Endereço |
+|---|---|
+| **Aplicação (front-end, Vercel)** | https://moeda-estudantil-gamma.vercel.app |
+| **API (back-end, Render)** | https://moeda-estudantil-api-2vu5.onrender.com |
+| **Banco** | PostgreSQL 16 gerenciado pelo Render (rede interna, sem acesso público) |
+
+### 15.1 Diagrama de Implantação
+
+![Diagrama de Implantação](docs/diagramas/diagrama-implantacao.png)
+
+Fonte em [`docs/diagramas/diagrama-implantacao.puml`](docs/diagramas/diagrama-implantacao.puml).
+
+- **Navegador → Vercel (HTTPS).** A Vercel serve o build do Vite (HTML, JS, CSS) pela rede de borda dela. O [`frontend/vercel.json`](frontend/vercel.json) faz duas coisas: encaminha `/api/*` para o Render e devolve o `index.html` nas demais rotas, porque as rotas do React existem só no navegador. Para o navegador tudo vem do mesmo endereço, então não precisa de CORS.
+- **Vercel → Render (HTTPS).** O serviço web roda o jar do Spring Boot num container Docker com JRE 21.
+- **Render → PostgreSQL (JDBC, porta 5432, rede interna).** Endereço, porta, banco, usuário e senha chegam por variáveis de ambiente que o [`render.yaml`](render.yaml) liga ao banco gerenciado. O Flyway cria o schema na primeira subida.
+- **Render → Mailtrap (HTTPS).** Notificações por email (RN06, RN10) enviadas por API HTTP.
+- **Implantação.** O Render cria banco e serviço a partir do `render.yaml` (Blueprint) e compila o `backend/Dockerfile`. O front foi publicado na Vercel enviando o build (`npm run build`) direto pelo painel, sem conectar o GitHub à Vercel.
+
+### 15.2 O que a nuvem exigiu mudar
+
+O plano gratuito do Render tem restrições que quebrariam o sistema da Release 1 ([limites do plano gratuito](https://render.com/docs/free)):
+
+| Restrição | Solução | Onde |
+|---|---|---|
+| Java não é runtime nativo do Render | `Dockerfile` em dois estágios (Maven → JRE 21 Alpine), JVM ajustada a 512 MB e 0,1 CPU, usuário sem privilégios | `backend/Dockerfile` |
+| O disco é apagado a cada reinício ou deploy: as fotos das vantagens sumiriam | Fotos gravadas no PostgreSQL (migração `V3__fotos_no_banco.sql`, entidade `Foto`, `FotoRepository`). A interface do `FotoStorage` não mudou. Como cada foto tem nome único e nunca muda, a resposta leva cache de 1 ano | `FotoStorage`, `FotoController` |
+| Saída por SMTP (portas 25, 465, 587) bloqueada | Interface `CanalEmail` com duas implementações escolhidas por configuração (`app.mail.provedor`): `SmtpCanalEmail` (local, Mailpit) e `MailtrapCanalEmail` (nuvem, API HTTP). O email continua saindo só depois do commit e uma falha de envio só vai para o log | `service/` |
+| Endereço do banco e segredos mudam por ambiente | Tudo por variável de ambiente; o Render gera o segredo do JWT | `application.properties`, `render.yaml` |
+| O serviço dorme após 15 min sem uso | A tela de login avisa quando a resposta passa de 5 s | `Login.jsx` |
+
+**Por que Mailtrap:** os emails da demonstração são fictícios (`@aluno.exemplo.com`). O Sandbox do Mailtrap captura as mensagens numa caixa de testes, como o Mailpit faz localmente; um provedor de envio real devolveria tudo.
+
+**Mudanças nos modelos:** diagramas de classes (`Foto`, `CanalEmail` e implementações), de componentes (serviço de email), de persistência (`FotoRepository`, migração V3) e modelo ER (tabela `foto`).
+
+### 15.3 Validação
+
+- **30 testes automatizados** (`mvn test`), dois novos: a chamada HTTP ao Mailtrap e a gravação da foto no banco, byte a byte.
+- **Imagem Docker com os limites do plano gratuito** (`--memory=512m --cpus=0.1`) contra um PostgreSQL limpo: aplicação no ar em 99 s, usando 218 MB de 512 MB. Depois de popular os dados e **reiniciar o container**, as fotos continuaram sendo servidas, idênticas.
+- **Na nuvem**, pelo endereço da Vercel: página inicial, rotas internas, vitrine com fotos, login dos três perfis, extrato do aluno e bloqueio sem token (401).
+
+### 15.4 Limites conhecidos do plano gratuito
+
+- **Primeiro acesso lento:** o serviço dorme após 15 min sem tráfego e leva ~1–2 min para voltar.
+- **Banco com prazo:** o PostgreSQL gratuito do Render expira 30 dias após a criação (criado em 27/11/2026). Para recriar: novo Blueprint a partir do `render.yaml`; o Flyway refaz o schema e `scripts/popular-demo.mjs` repovoa os dados.
+- **Emails:** para ativar, criar uma caixa no Mailtrap Sandbox e definir `MAILTRAP_URL` (`https://sandbox.api.mailtrap.io/api/send/{inbox_id}`) e `MAILTRAP_TOKEN` em *moeda-estudantil-api → Environment*. Sem isso, o sistema funciona e as falhas de envio ficam só no log.
+
+### 15.5 Como implantar
+
+1. **Render:** *New → Blueprint →* URL do repositório. O `render.yaml` cria o banco e o serviço; informar `MAILTRAP_URL` e `MAILTRAP_TOKEN`.
+2. **Vercel:** ajustar o destino de `/api/*` em `frontend/vercel.json` para o endereço do serviço no Render, rodar `npm run build` em `frontend/` e publicar a pasta gerada junto com o `vercel.json`. Também funciona importando o repositório com *Root Directory* `frontend`.
+3. **Dados de demonstração:** `API_URL=https://<servico>.onrender.com/api node scripts/popular-demo.mjs`.
+
+## 16. Como executar
 
 Pré-requisitos: Java 21, Maven, Node 20+ e Docker.
 
@@ -434,7 +493,7 @@ node scripts/popular-demo.mjs
 
 O script `scripts/popular-demo.mjs` cria, pela própria API e passando pelas mesmas regras de negócio, 5 alunos, 5 empresas parceiras, 7 vantagens com foto, 7 reconhecimentos e 2 resgates. Para recomeçar do zero: `docker compose down -v`, `docker compose up -d`, reinicie o back-end e rode o script de novo.
 
-Testes do back-end: `cd backend && mvn test` (28 testes; não precisam do Docker).
+Testes do back-end: `cd backend && mvn test` (30 testes; não precisam do Docker).
 
 **Segredo do JWT:** em desenvolvimento há um valor padrão em `application.properties`. Fora do ambiente local, defina a variável de ambiente `JWT_SEGREDO` (mínimo de 32 caracteres).
 
