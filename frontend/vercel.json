@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://moeda-estudantil-api.onrender.com/api/:path*"
+      "destination": "https://moeda-estudantil-api-2vu5.onrender.com/api/:path*"
     },
     {
       "source": "/(.*)",
